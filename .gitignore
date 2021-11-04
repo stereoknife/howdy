@@ -1,0 +1,14 @@
+# IDE
+.idea/
+.nova/
+.vscode/
+
+# Builds
+dist*/
+build*/
+
+# Secrets
+**/*.secret
+
+# Other files
+.DS_Store
