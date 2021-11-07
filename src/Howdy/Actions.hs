@@ -13,7 +13,7 @@ import           Howdy.Parser         (MonadParse)
 -- Command context has message/parser as reader (state but it don't matter) around a DiscordHandler output
 
 newtype ActionContext a = ActionContext { runAction :: StateT Text DiscordHandler a }
-    deriving (Functor, Applicative, Monad, MonadState Text)
+    deriving (Functor, Applicative, Monad, MonadParse)
 
 -- There should be some data structure defining parsed data ??
 
