@@ -1,4 +1,6 @@
-module Howdy.Parser.Trans where
+module Howdy.Internal.Parser.Trans
+       {-# WARNING "Unused, this is here in case it's needed in the future again." #-}
+       () where
 
 import           Control.Applicative (Alternative (..))
 import           Control.Monad.Trans (MonadTrans (..))

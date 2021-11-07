@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
-module Howdy.Parser.Types ( Parser (..), runParser ) where
+module Howdy.Internal.Parser.Types ( Parser (..) ) where
 
 import           Control.Applicative (Alternative (..))
 import           Data.Text           (Text)

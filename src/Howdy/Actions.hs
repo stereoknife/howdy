@@ -2,17 +2,18 @@
 
 module Howdy.Actions where
 
-import           Control.Monad.State  (StateT)
+import           Control.Monad.State  (MonadState, StateT)
 import           Control.Monad.Writer (MonadWriter (tell), Writer, execWriter)
 import           Data.Default         (Default (def))
 import           Data.Semigroup       (Semigroup)
 import           Data.Text            (Text)
 import           Discord              (DiscordHandler)
+import           Howdy.Parser         (MonadParse)
 
 -- Command context has message/parser as reader (state but it don't matter) around a DiscordHandler output
 
 newtype ActionContext a = ActionContext { runAction :: StateT Text DiscordHandler a }
-    deriving (Functor, Applicative, Monad)
+    deriving (Functor, Applicative, Monad, MonadState Text)
 
 -- There should be some data structure defining parsed data ??
 

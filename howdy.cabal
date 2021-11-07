@@ -23,13 +23,17 @@ library
     exposed-modules:
         Howdy
         Howdy.Parser
-        Howdy.Parser.Trans
-        Howdy.Parser.Types
         Howdy.Bot
         Howdy.Context
+        Howdy.Actions
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:
+        Howdy.Internal.Bot.Builder
+        Howdy.Internal.Bot.Run
+        Howdy.Internal.Parser.Class
+        Howdy.Internal.Parser.Cons
+        Howdy.Internal.Parser.Types
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
