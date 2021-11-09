@@ -46,14 +46,14 @@ spec = do
                 runParser (string "") "anything here" `shouldBe` Just ("", "anything here")
 
         describe "text" $ do
-            it "parses all characters as text until a specific character" $ do
-                runParser (text ',') "hello, world" `shouldBe` Just ("hello", ", world")
+            it "parses all characters as text until a predicate passes" $ do
+                runParser (text (== ',')) "hello, world" `shouldBe` Just ("hello", ", world")
             it "parses the whole input when the character never matches" $ do
-                runParser (text ',') "hello world" `shouldBe` Just ("hello world", "")
+                runParser (text (== ',')) "hello world" `shouldBe` Just ("hello world", "")
             it "fails when the character is the first in the input" $ do
-                runParser (text 'a') "abcd" `shouldBe` Nothing
+                runParser (text (== 'a')) "abcd" `shouldBe` Nothing
             it "fails when given an empty input" $ do
-                runParser (text 'a') "" `shouldBe` Nothing
+                runParser (text (== 'a')) "" `shouldBe` Nothing
 
         describe "word" $ do
             it "parses all characters as text until a space character" $ do

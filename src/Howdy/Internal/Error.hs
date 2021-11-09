@@ -2,13 +2,24 @@
 
 module Howdy.Internal.Error where
 
-import           Discord (RestCallErrorCode)
+import           Data.Semigroup (Semigroup)
+import           Discord        (RestCallErrorCode)
+
+-- TODO: Combine multiple errors
 
 data HowdyException where
     ParseError :: HowdyException
-    DiscordError :: HowdyException
     CommandMissing :: HowdyException
+    DiscordError :: HowdyException
     UnknownError :: HowdyException
+    deriving (Eq, Ord, Bounded)
+
+-- Keep the first error
+instance Semigroup HowdyException where
+    (<>) = const
+
+instance Monoid HowdyException where
+    mempty = UnknownError
 
 class KnownError e where
     absorb :: e -> HowdyException

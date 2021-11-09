@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 
-module Howdy.Error (contain, catch, HowdyException) where
+module Howdy.Error (contain, catch, report, HowdyException) where
 
 import           Control.Monad.Except (MonadError (throwError))
 import           Howdy.Internal.Error (HowdyException, KnownError (..))
@@ -12,3 +12,6 @@ contain (Left e)  = throwError . absorb $ e
 
 catch :: (MonadError HowdyException m, KnownError e) => m (Either e a) -> m a
 catch e = e >>= contain
+
+report :: (MonadError HowdyException m) => HowdyException -> m ()
+report = throwError

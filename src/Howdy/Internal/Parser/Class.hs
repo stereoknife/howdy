@@ -3,18 +3,24 @@
 
 module Howdy.Internal.Parser.Class where
 
-import           Control.Monad.State         (MonadState (get, put), StateT)
+import           Control.Monad.Except        (MonadError (throwError),
+                                              liftEither)
+import           Control.Monad.State         (MonadState (get, put), StateT,
+                                              gets)
 import           Data.Text                   (Text)
+import           Howdy.Internal.Error        (HowdyException (ParseError))
+import           Howdy.Internal.Parser.Cons  (rest)
 import           Howdy.Internal.Parser.Types (Parser (runParser))
 
 class Monad m => MonadParse m where
-    parse :: Parser a -> m (Maybe a)
+    parse :: Parser a -> m a
 
 
-instance Monad m => MonadParse (StateT Text m) where
+instance (Monad m, MonadError HowdyException m) => MonadParse (StateT Text m) where
     parse p = do
         t <- get
-        case runParser p t of Nothing       -> pure Nothing
-                              Just (v,rest) -> do
-                                  put rest
-                                  pure $ Just v
+        (v, rest) <- liftEither $ handleE $ runParser p t
+        put rest
+        pure v
+        where handleE Nothing  = Left ParseError
+              handleE (Just v) = Right v

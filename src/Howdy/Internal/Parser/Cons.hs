@@ -4,19 +4,19 @@ module Howdy.Internal.Parser.Cons where
 
 import           Control.Applicative         (Alternative (empty, many, some, (<|>)))
 import           Control.Monad               (guard)
+import           Data.Char                   (isSpace)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Howdy.Internal.Parser.Types (Parser (..))
 
 char :: Char -> Parser Char
-char c = Parser go
-    where go (T.uncons -> Just (x, xs)) = guard (x == c) >> Just (x, xs)
-          go _                          = Nothing
+char c = anyChar `when` (c ==)
 
 notChar :: Char -> Parser Char
-notChar c = Parser go
-    where go (T.uncons -> Just (x, xs)) = guard (x /= c) >> Just (x, xs)
-          go _                          = Nothing
+notChar c = anyChar `when` (c /=)
+
+whitespace :: Parser Char
+whitespace = anyChar `when` isSpace
 
 anyChar :: Parser Char
 anyChar = Parser go
@@ -33,17 +33,27 @@ string (T.uncons -> Just (x, xs)) = do
     s <- string xs
     pure $ T.singleton h <> s
 
-text :: Char -> Parser Text
-text c = T.pack <$> some (notChar c)
+text :: (Char -> Bool) -> Parser Text
+text c = T.pack <$> some (anyChar `unless` c)
 
 word :: Parser Text
-word = many (char ' ') >> text ' '
+word = many whitespace >> text isSpace
 
 flag :: Parser Text
-flag = string "--" >> text ' '
+flag = string "--" >> text isSpace
 
 rest :: Parser Text
 rest = Parser $ flip (curry Just) ""
 
 firstof :: (a -> Parser b) -> [a] -> Parser b
 firstof f = foldr ((<|>) . f) empty
+
+when :: Parser a -> (a -> Bool) -> Parser a
+when p c = Parser $ \s ->
+    case runParser p s of Just (v, rest) -> pred (c v) (v, rest)
+                          Nothing        -> Nothing
+    where pred True  v = Just v
+          pred False _ = Nothing
+
+unless :: Parser a -> (a -> Bool) -> Parser a
+unless p c = when p (not . c)

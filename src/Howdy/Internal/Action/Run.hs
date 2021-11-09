@@ -5,7 +5,8 @@
 
 module Howdy.Internal.Action.Run where
 
-import           Control.Monad.Except        (ExceptT, MonadError,
+import           Control.Applicative         (Alternative (..))
+import           Control.Monad.Except        (ExceptT, MonadError (throwError),
                                               MonadTrans (lift), runExceptT,
                                               void)
 import           Control.Monad.IO.Class      (MonadIO)
@@ -22,7 +23,7 @@ import           Discord                     (DiscordHandler)
 import           Discord.Types               (Message, User)
 import           Howdy.Context               (Context (ctx))
 import           Howdy.Discord.Class         (Discord (liftDiscord), Reply)
-import           Howdy.Internal.Error        (HowdyException)
+import           Howdy.Internal.Error        (HowdyException (CommandMissing))
 import           Howdy.Internal.Parser.Class (MonadParse)
 
 
@@ -52,6 +53,11 @@ instance Context Message CommandRunner where
 
 instance Context User CommandRunner where
     ctx = asks snd
+
+instance Alternative CommandRunner where
+  empty = throwError CommandMissing
+  a <|> b = CommandRunner $ runCommand a <|> runCommand b
+
 
 -- Reaction Instances
 

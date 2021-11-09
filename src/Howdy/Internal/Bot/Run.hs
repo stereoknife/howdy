@@ -78,8 +78,8 @@ eventHandler _ _                        = pure ()
 
 messageHandler :: Bot -> CommandRunner ()
 messageHandler b = do
-    prefix <- attemptWith ParseError $ parse $ firstof string $ prefixesStore b
-    alias <- attemptWith ParseError $ parse word
+    prefix <- parse $ firstof string $ prefixesStore b
+    alias <- parse word
     cmd <- liftMaybe CommandMissing $ commandsStore b !? alias
     getRunner cmd
 
