@@ -2,10 +2,11 @@
 
 module Howdy.Internal.Bot.Builder where
 
-import           Control.Monad.Writer (MonadWriter (tell), Writer,
-                                       WriterT (WriterT), execWriter)
-import           Data.Text            (Text)
-import           Howdy.Actions        (CommandBuilder (run_CB), CommandData)
+import           Control.Monad.Writer          (MonadWriter (tell), Writer,
+                                                WriterT (WriterT), execWriter)
+import           Data.Text                     (Text)
+import           Howdy.Internal.Action.Builder (CommandBuilder (run_CB),
+                                                CommandData)
 
 data BotData = BotData { getPrefixes  :: [Text]
                        , getCommands  :: [CommandData]
