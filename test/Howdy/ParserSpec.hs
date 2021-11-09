@@ -50,10 +50,10 @@ spec = do
                 runParser (text ',') "hello, world" `shouldBe` Just ("hello", ", world")
             it "parses the whole input when the character never matches" $ do
                 runParser (text ',') "hello world" `shouldBe` Just ("hello world", "")
-            it "returns an empty text when the character is the first in the input" $ do
-                runParser (text 'a') "abcd" `shouldBe` Just ("", "abcd")
-            it "returns an empty result when given an empty input" $ do
-                runParser (text 'a') "" `shouldBe` Just ("", "")
+            it "fails when the character is the first in the input" $ do
+                runParser (text 'a') "abcd" `shouldBe` Nothing
+            it "fails when given an empty input" $ do
+                runParser (text 'a') "" `shouldBe` Nothing
 
         describe "word" $ do
             it "parses all characters as text until a space character" $ do

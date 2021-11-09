@@ -2,7 +2,7 @@
 
 module Howdy.Internal.Parser.Cons where
 
-import           Control.Applicative         (Alternative (empty, many, (<|>)))
+import           Control.Applicative         (Alternative (empty, many, some, (<|>)))
 import           Control.Monad               (guard)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
@@ -34,7 +34,7 @@ string (T.uncons -> Just (x, xs)) = do
     pure $ T.singleton h <> s
 
 text :: Char -> Parser Text
-text c = T.pack <$> many (notChar c)
+text c = T.pack <$> some (notChar c)
 
 word :: Parser Text
 word = many (char ' ') >> text ' '
