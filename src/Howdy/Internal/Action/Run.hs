@@ -6,6 +6,7 @@
 module Howdy.Internal.Action.Run where
 
 import           Control.Applicative         (Alternative (..))
+import           Control.Monad.Catch         (MonadThrow)
 import           Control.Monad.Except        (ExceptT, MonadError (throwError),
                                               MonadTrans (lift), runExceptT,
                                               void)
@@ -29,7 +30,7 @@ import           Howdy.Internal.Parser.Class (MonadParse)
 
 -- TODO: These stacks are terrible, please change them for something nicer eventually
 newtype CommandRunner a = CommandRunner { runCommand :: StateT Text (ReaderT (Message, User) (ExceptT HowdyException DiscordHandler)) a }
-    deriving (Functor, Applicative, Monad, MonadError HowdyException, MonadParse, MonadReader (Message, User))
+    deriving (Functor, Applicative, Monad, MonadError HowdyException, MonadParse, MonadReader (Message, User), MonadThrow, MonadIO)
 
 -- TODO: Change store for a nicer data structure
 newtype ReactionRunner a = ReactionRunner { runReaction :: ReaderT (Message, User) (ExceptT HowdyException DiscordHandler) a }

@@ -1,24 +1,27 @@
 module Howdy.ParserSpec where
 
-import Howdy.Parser
-import Test.Hspec
+import qualified Data.Text             as T
+import           Data.Text.Arbitrary   ()
+import           Howdy.Parser
+import           Test.Hspec            (Spec, describe, it, shouldBe)
+import           Test.Hspec.QuickCheck (prop)
 
 spec :: Spec
 spec = do
     describe "Howdy.Parser" $ do
         describe "char" $ do
-            it "parses a matching character from an input" $ do
-                runParser (char 'a') "abcd" `shouldBe` Just ('a', "bcd")
-            it "fails when the input doesn't match" $ do
-                runParser (char 'b') "abcd" `shouldBe` Nothing
+            prop "parses a matching character from an input" $
+                \x xs -> runParser (char x) (T.cons x xs) `shouldBe` Just (x, xs)
+            prop "fails when the input doesn't match" $
+                \x xs -> runParser (char x) xs `shouldBe` Nothing
 
         describe "notChar" $ do
-            it "parses a non-matching character from an input" $ do
-                runParser (notChar 'a') "bcde" `shouldBe` Just ('b', "cde")
-            it "fails when the input matches" $ do
-                runParser (notChar 'b') "bcde" `shouldBe` Nothing
-            it "fails when given an empty input" $ do
-                runParser (notChar 'a') "" `shouldBe` Nothing
+            prop "parses a non-matching character from an input" $
+                \x y ys -> runParser (notChar x) (T.cons y ys) `shouldBe` Just (y, ys)
+            prop "fails when the input matches" $
+                \x xs -> runParser (notChar x) (T.cons x xs) `shouldBe` Nothing
+            prop "fails when given an empty input" $
+                \x -> runParser (notChar x) "" `shouldBe` Nothing
 
         describe "anyChar" $ do
             it "parses the first character from an input" $ do
