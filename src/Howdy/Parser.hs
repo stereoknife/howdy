@@ -12,10 +12,11 @@ module Howdy.Parser ( Parser (..)
                     , flag
                     , rest
                     , firstof
+                    , whitespace
                     ) where
 
 import           Howdy.Internal.Parser.Class (MonadParse (..))
 import           Howdy.Internal.Parser.Cons  (anyChar, char, chars, firstof,
                                               flag, notChar, rest, string, text,
-                                              word)
+                                              whitespace, word)
 import           Howdy.Internal.Parser.Types (Parser (..))

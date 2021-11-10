@@ -48,15 +48,15 @@ preprocessCommand cd = (head $ getAlias cd, cd)
 convertCommands :: [CommandData] -> HashMap Text CommandData
 convertCommands = M.fromList . fmap preprocessCommand
 
-bot :: BotBuilder () -> Bot
-bot (BotBuilder bb) = Bot { prefixesStore = getPrefixes b
+mkBot :: BotBuilder () -> Bot
+mkBot (BotBuilder bb) = Bot { prefixesStore = getPrefixes b
                             , commandsStore = convertCommands $ getCommands b
                             , reactionsStore = M.empty
                             }
                       where b = execWriter bb
 
-run :: Bot -> IO ()
-run b = do
+runBot :: Bot -> IO ()
+runBot b = do
     tok <- TIO.readFile "./token.secret" <|> T.pack <$> getEnv "DISCORD_TOKEN"
     -- open ghci and run  [[ :info RunDiscordOpts ]] to see available fields
     t <- runDiscord $ def

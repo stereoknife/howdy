@@ -8,11 +8,13 @@ module Howdy.Bot ( BotData (..)
                  , prefixes
                  , reaction
                  , bot
-                 , run
                  ) where
 
 import           Howdy.Internal.Bot.Builder (BotBuilder (..), BotData (..),
                                              command, prefix, prefixes,
                                              reaction)
 
-import           Howdy.Internal.Bot.Run     (Bot (..), bot, run)
+import           Howdy.Internal.Bot.Run     (Bot (..), mkBot, runBot)
+
+bot :: BotBuilder () -> IO ()
+bot = runBot . mkBot
