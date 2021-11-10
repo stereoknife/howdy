@@ -6,11 +6,13 @@ import           Control.Monad.Writer          (MonadWriter (tell), Writer,
                                                 WriterT (WriterT), execWriter)
 import           Data.Text                     (Text)
 import           Howdy.Internal.Action.Builder (CommandBuilder (run_CB),
-                                                CommandData)
+                                                CommandData,
+                                                ReactionBuilder (run_RB),
+                                                ReactionData (ReactionData))
 
 data BotData = BotData { getPrefixes  :: [Text]
                        , getCommands  :: [CommandData]
-                       , getReactions :: [()]
+                       , getReactions :: [ReactionData]
                        }
 
 instance Semigroup BotData where
@@ -34,5 +36,5 @@ prefix p = tell $ mempty{getPrefixes = [p]}
 prefixes :: [Text] -> BotBuilder ()
 prefixes p = tell $ mempty{getPrefixes = p}
 
-reaction :: () -> BotBuilder ()
-reaction r = tell $ mempty{getReactions = [r]}
+reaction :: ReactionBuilder () -> BotBuilder ()
+reaction r = tell $ mempty{getReactions = [execWriter $ run_RB r]}
