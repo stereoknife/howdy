@@ -24,7 +24,7 @@ import           Discord                     (DiscordHandler)
 import           Discord.Types               (Message, User)
 import           Howdy.Context               (Context (ctx))
 import           Howdy.Discord.Class         (Discord (liftDiscord), Reply)
-import           Howdy.Internal.Error        (HowdyException (CommandMissing))
+import           Howdy.Internal.Error        (HowdyException (..))
 import           Howdy.Internal.Parser.Class (MonadParse)
 
 
