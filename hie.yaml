@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:howdy"
+
+    - path: "test"
+      component: "howdy:test:howdy-spec"
