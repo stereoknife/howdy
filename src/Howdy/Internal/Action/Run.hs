@@ -73,3 +73,7 @@ instance Context Message ReactionRunner where
 
 instance Context User ReactionRunner where
     ctx = asks snd
+
+instance Alternative ReactionRunner where
+  empty = throwError ReactionMissing
+  a <|> b = ReactionRunner $ runReaction a <|> runReaction b

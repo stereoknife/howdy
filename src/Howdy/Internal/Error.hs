@@ -10,6 +10,7 @@ import           Discord        (RestCallErrorCode)
 data HowdyException where
     ParseError :: HowdyException
     CommandMissing :: HowdyException
+    ReactionMissing :: HowdyException
     DiscordError :: HowdyException
     UnknownError :: HowdyException
     deriving (Eq, Ord, Bounded)
