@@ -12,3 +12,4 @@ build*/
 
 # Other files
 .DS_Store
+cabal.project.local
