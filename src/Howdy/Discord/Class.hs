@@ -1,25 +1,29 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Howdy.Discord.Class where
+module Howdy.Discord.Class ( module Discord.Types
+                           , MonadDiscord (..)
+                           , MonadReply (..)
+                           ) where
+
+import           Control.Monad.Catch   (MonadThrow)
 import           Control.Monad.Except  (MonadError, void)
 import           Data.Text             (Text)
 import           Discord               (DiscordHandler, FromJSON, restCall)
 import           Discord.Internal.Rest (Request)
 import qualified Discord.Requests      as R
-import           Discord.Types         (Channel (..), Emoji (..), Message (..),
-                                        User (..))
+import           Discord.Types
 import           Howdy.Context         (Context (fctx))
 import           Howdy.Error           (catch)
 import           Howdy.Internal.Error  (HowdyException, KnownError)
 
 
 
-class (Monad m, MonadError HowdyException m) => Discord m where
+class (Monad m, MonadError HowdyException m, MonadThrow m) => MonadDiscord m where
     liftDiscord :: DiscordHandler a -> m a
     catchDiscord :: KnownError e => DiscordHandler (Either e a) -> m a
     catchDiscord = catch . liftDiscord
 
-class (Context Message m, Context User m, Discord m, MonadError HowdyException m) => Reply m where
+class (Context Message m, Context User m, MonadDiscord m, MonadError HowdyException m) => MonadReply m where
     reply   :: Text -> m ()
     whisper :: Text -> m ()
     react   :: Emoji -> m ()

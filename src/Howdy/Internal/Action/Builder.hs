@@ -17,7 +17,7 @@ import           Data.Semigroup            (Semigroup)
 import           Data.Text                 (Text)
 import           Discord                   (DiscordHandler)
 import           Discord.Types             (Emoji)
-import           Howdy.Discord.Class       (Discord)
+import           Howdy.Discord.Class       (MonadDiscord)
 import           Howdy.Internal.Action.Run (CommandRunner, ReactionRunner)
 import           Howdy.Parser              (MonadParse)
 

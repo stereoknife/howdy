@@ -1,6 +1,7 @@
 module Howdy.Internal.Bot.Run where
 
 import           Control.Applicative           (Alternative ((<|>)))
+import           Control.Monad                 (when)
 import           Control.Monad.Except          (MonadError (throwError),
                                                 runExceptT, void)
 import           Control.Monad.State           (MonadTrans (lift), evalStateT)
@@ -21,10 +22,12 @@ import           Discord.Types                 (Emoji, Event (..),
                                                 ReactionInfo)
 import           Howdy.Internal.Action.Builder (CommandData (getAlias, getRunner))
 import           Howdy.Internal.Action.Run     (CommandRunner (runCommand),
-                                                Exec (exec), ReactionRunner)
+                                                MonadExec (exec),
+                                                ReactionRunner)
 import           Howdy.Internal.Bot.Builder    (BotBuilder (BotBuilder),
                                                 BotData (..))
 import           Howdy.Internal.Error          (HowdyException (CommandMissing, ParseError))
+import           Howdy.Internal.Help           (help)
 import           Howdy.Internal.Parser.Class   (MonadParse (..))
 import           Howdy.Internal.Parser.Cons    (firstof, string, word)
 import           Prelude                       hiding (or)
@@ -50,10 +53,11 @@ convertCommands = M.fromList . fmap preprocessCommand
 
 mkBot :: BotBuilder () -> Bot
 mkBot (BotBuilder bb) = Bot { prefixesStore = getPrefixes b
-                            , commandsStore = convertCommands $ getCommands b
+                            , commandsStore = convertCommands (help coms : coms)
                             , reactionsStore = M.empty
                             }
                       where b = execWriter bb
+                            coms = getCommands b
 
 runBot :: Bot -> IO ()
 runBot b = do

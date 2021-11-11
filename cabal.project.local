@@ -1,0 +1,5 @@
+ignore-project: False
+extra-prog-path: /opt/homebrew/opt/llvm@12/bin
+
+package *
+  extra-prog-path: /opt/homebrew/opt/llvm@12/bin
