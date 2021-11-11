@@ -16,17 +16,21 @@ import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Discord                       (DiscordHandler,
                                                 RunDiscordOpts (..), def,
-                                                runDiscord)
-import           Discord.Types                 (Emoji, Event (..),
+                                                restCall, runDiscord)
+import           Discord.Internal.Rest.Channel (ChannelRequest (GetChannelMessage))
+import           Discord.Internal.Rest.User
+import           Discord.Types                 (Emoji (emojiName), Event (..),
                                                 Message (messageAuthor, messageText),
-                                                ReactionInfo)
-import           Howdy.Internal.Action.Builder (CommandData (getAlias, getRunner))
+                                                ReactionInfo (reactionChannelId, reactionEmoji, reactionMessageId, reactionUserId))
+import           Howdy.Discord.Class           (MonadDiscord (catchDiscord))
+import           Howdy.Internal.Action.Builder (CommandData (getAlias, getRunner),
+                                                ReactionData (reactionRunner))
 import           Howdy.Internal.Action.Run     (CommandRunner (runCommand),
                                                 MonadExec (exec),
                                                 ReactionRunner)
 import           Howdy.Internal.Bot.Builder    (BotBuilder (BotBuilder),
                                                 BotData (..))
-import           Howdy.Internal.Error          (HowdyException (CommandMissing, ParseError))
+import           Howdy.Internal.Error          (HowdyException (..))
 import           Howdy.Internal.Help           (help)
 import           Howdy.Internal.Parser.Class   (MonadParse (..))
 import           Howdy.Internal.Parser.Cons    (firstof, string, word)
@@ -35,7 +39,7 @@ import           System.Environment            (getEnv)
 
 --type PrefixesStore = [Text]
 type CommandsStore = HashMap Text CommandData
-type ReactionsStore = HashMap Emoji ()
+type ReactionsStore = HashMap Text ReactionData
 
 data Bot = Bot { prefixesStore  :: [Text]
                , commandsStore  :: CommandsStore
@@ -77,7 +81,11 @@ startHandler = liftIO $ putStrLn "Start" -- error "not implemented"
 
 eventHandler :: Bot -> Event -> DiscordHandler ()
 eventHandler bot (MessageCreate m)      = exec (messageText m, m, messageAuthor m) $ messageHandler bot
-eventHandler bot (MessageReactionAdd r) = undefined
+eventHandler bot (MessageReactionAdd r) = do
+                                          m <- restCall $ GetChannelMessage (reactionChannelId r, reactionMessageId r)
+                                          u <- restCall $ GetUser (reactionUserId r)
+                                          case (m, u) of (Right m', Right u') -> exec (m', u') $ reactionHandler bot r
+                                                         _                    -> pure ()
 eventHandler _ _                        = pure ()
 
 messageHandler :: Bot -> CommandRunner ()
@@ -86,6 +94,16 @@ messageHandler b = do
     alias <- parse word
     cmd <- liftMaybe CommandMissing $ commandsStore b !? alias
     getRunner cmd
+
+reactionHandler :: Bot -> ReactionInfo -> ReactionRunner ()
+reactionHandler b r = do
+    let e = emojiName . reactionEmoji $ r
+    recData <- liftMaybe ReactionMissing $ reactionsStore b !? e
+    reactionRunner recData
+
+exe :: Functor f => f a -> f ()
+exe = fmap go
+    where go a = seq a ()
 
 attempt :: MonadError e m => m (Maybe a) -> e -> m a
 attempt = flip attemptWith
@@ -96,10 +114,3 @@ attemptWith e ma = ma >>= liftMaybe e
 liftMaybe :: MonadError e m => e -> Maybe a -> m a
 liftMaybe e Nothing  = throwError e
 liftMaybe _ (Just a) = pure a
-
-reactionHandler :: Bot -> ReactionInfo -> ReactionRunner ()
-reactionHandler = undefined
-
-exe :: Functor f => f a -> f ()
-exe = fmap go
-    where go a = seq a ()

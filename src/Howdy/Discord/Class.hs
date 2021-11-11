@@ -27,6 +27,7 @@ class (Context Message m, Context User m, MonadDiscord m, MonadError HowdyExcept
     reply   :: Text -> m ()
     whisper :: Text -> m ()
     react   :: Emoji -> m ()
+    embed   :: CreateEmbed -> m ()
 
     reply t = void $ do
         ch <- fctx messageChannel
@@ -41,3 +42,8 @@ class (Context Message m, Context User m, MonadDiscord m, MonadError HowdyExcept
         ch <- fctx messageChannel
         mg <- fctx messageId
         catchDiscord $ restCall $ R.CreateReaction (ch, mg) $ emojiName e
+
+    embed e = do
+        ch <- fctx messageChannel
+        catchDiscord $ restCall $ R.CreateMessageEmbed ch "" e
+        pure ()

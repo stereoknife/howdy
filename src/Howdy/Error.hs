@@ -1,7 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
 
-module Howdy.Error (contain, catch, report, HowdyException (..)) where
+module Howdy.Error ( contain
+                   , catch
+                   , report
+                   , HowdyException (..)
+                   , MonadError (..)
+                   ) where
 
 import           Control.Monad.Except (MonadError (throwError))
 import           Howdy.Internal.Error (HowdyException (..), KnownError (..))

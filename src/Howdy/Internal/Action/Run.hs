@@ -35,7 +35,7 @@ newtype CommandRunner a = CommandRunner { runCommand :: StateT Text (ReaderT (Me
 
 -- TODO: Change store for a nicer data structure
 newtype ReactionRunner a = ReactionRunner { runReaction :: ReaderT (Message, User) (ExceptT HowdyException DiscordHandler) a }
-    deriving (Functor, Applicative, Monad, MonadError HowdyException, MonadReader (Message, User), MonadThrow)
+    deriving (Functor, Applicative, Monad, MonadError HowdyException, MonadReader (Message, User), MonadThrow, MonadIO)
 
 class MonadDiscord m => MonadExec e m where
     exec :: Default a => e -> m a -> DiscordHandler a
@@ -65,6 +65,8 @@ instance Alternative CommandRunner where
 
 instance MonadDiscord ReactionRunner where
     liftDiscord = ReactionRunner . lift . lift
+
+instance MonadReply ReactionRunner
 
 instance MonadExec (Message, User) ReactionRunner where
     exec e = fmap (fromRight def) . runExceptT . flip runReaderT e . runReaction
