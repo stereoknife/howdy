@@ -1,7 +1,7 @@
 module Howdy.Internal.Bot.Run where
 
 import           Control.Applicative           (Alternative ((<|>)))
-import           Control.Monad                 (when)
+import           Control.Monad                 (guard, when)
 import           Control.Monad.Except          (MonadError (throwError),
                                                 runExceptT, void)
 import           Control.Monad.State           (MonadTrans (lift), evalStateT)
@@ -17,14 +17,18 @@ import qualified Data.Text.IO                  as TIO
 import           Discord                       (DiscordHandler,
                                                 RunDiscordOpts (..), def,
                                                 restCall, runDiscord)
-import           Discord.Internal.Rest.Channel (ChannelRequest (GetChannelMessage))
+import           Discord.Internal.Rest.Channel (ChannelRequest (GetChannelMessage),
+                                                ReactionTiming (LatestReaction))
 import           Discord.Internal.Rest.User    (UserRequest (GetUser))
+import qualified Discord.Requests              as R
 import           Discord.Types                 (Emoji (emojiName), Event (..),
                                                 Message (messageAuthor, messageText),
-                                                ReactionInfo (reactionChannelId, reactionEmoji, reactionMessageId, reactionUserId))
-import           Howdy.Discord.Class           (MonadDiscord (catchDiscord))
+                                                ReactionInfo (reactionChannelId, reactionEmoji, reactionMessageId, reactionUserId),
+                                                User (userId))
+import           Howdy.Discord.Class           (MonadDiscord (catchDiscord, liftDiscord))
 import           Howdy.Internal.Action.Builder (CommandData (getAlias, getRunner),
                                                 ReactionData (reactionRunner))
+import qualified Howdy.Internal.Action.Builder as Reaction (ReactionData (reactionEmoji))
 import           Howdy.Internal.Action.Run     (CommandRunner (runCommand),
                                                 MonadExec (exec),
                                                 ReactionRunner)
@@ -55,13 +59,20 @@ preprocessCommand cd = (head $ getAlias cd, cd)
 convertCommands :: [CommandData] -> HashMap Text CommandData
 convertCommands = M.fromList . fmap preprocessCommand
 
+preprocessReaction :: ReactionData -> (Text, ReactionData)
+preprocessReaction rd = (head $ Reaction.reactionEmoji rd, rd)
+
+convertReactions :: [ReactionData] -> HashMap Text ReactionData
+convertReactions = M.fromList . fmap preprocessReaction
+
 mkBot :: BotBuilder () -> Bot
 mkBot (BotBuilder bb) = Bot { prefixesStore = getPrefixes b
                             , commandsStore = convertCommands (help coms : coms)
-                            , reactionsStore = M.empty
+                            , reactionsStore = convertReactions recs
                             }
                       where b = execWriter bb
                             coms = getCommands b
+                            recs = getReactions b
 
 runBot :: Bot -> IO ()
 runBot b = do
@@ -98,7 +109,12 @@ messageHandler b = do
 reactionHandler :: Bot -> ReactionInfo -> ReactionRunner ()
 reactionHandler b r = do
     let e = emojiName . reactionEmoji $ r
+    let msg = (reactionChannelId r, reactionMessageId r)
+    let usr = reactionUserId r
     recData <- liftMaybe ReactionMissing $ reactionsStore b !? e
+    reactUsers <- catchDiscord $ restCall $ R.GetReactions msg e (2, LatestReaction)
+    guard $ length reactUsers <= 1
+    liftDiscord $ restCall $ R.CreateReaction msg e
     reactionRunner recData
 
 exe :: Functor f => f a -> f ()
