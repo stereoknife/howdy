@@ -39,6 +39,7 @@ library
         Howdy.Internal.Action.Builder
         Howdy.Internal.Action.Run
         Howdy.Internal.Error
+        Howdy.Internal.Help
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

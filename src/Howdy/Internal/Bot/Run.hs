@@ -18,7 +18,7 @@ import           Discord                       (DiscordHandler,
                                                 RunDiscordOpts (..), def,
                                                 restCall, runDiscord)
 import           Discord.Internal.Rest.Channel (ChannelRequest (GetChannelMessage))
-import           Discord.Internal.Rest.User
+import           Discord.Internal.Rest.User    (UserRequest (GetUser))
 import           Discord.Types                 (Emoji (emojiName), Event (..),
                                                 Message (messageAuthor, messageText),
                                                 ReactionInfo (reactionChannelId, reactionEmoji, reactionMessageId, reactionUserId))
