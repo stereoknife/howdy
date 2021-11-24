@@ -17,7 +17,7 @@ maintainer:         hello@techniworm.dev
 -- A copyright notice.
 -- copyright:
 category:           Web
-extra-source-files: CHANGELOG.md
+-- extra-source-files: CHANGELOG.md
 
 library
     exposed-modules:
@@ -44,7 +44,7 @@ library
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-          base                 ^>=4.14.3.0
+          base                 ^>= 4.14.0.0
         , data-default         ^>= 0.7.1.1
         , discord-haskell      ^>= 1.8.1
         , mtl                  ^>= 2.2.2
@@ -62,7 +62,7 @@ test-suite howdy-spec
     ghc-options:        -Wall
     main-is:            Spec.hs
     build-depends:    
-          base              ^>=4.14.3.0
+          base              ^>= 4.14.0.0
         , hspec             ^>= 2.8.3
         , howdy
         , quickcheck-text   ^>= 0.1.2.1
