@@ -1,36 +1,40 @@
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Howdy.Context where
 
-import Data.Kind ( Type, Constraint )
-import GHC.TypeLits ( Symbol )
-import Discord.Types ( Message(messageAuthor), User )
+import           Data.Kind    (Constraint, Type)
+import           GHC.TypeLits (Symbol)
 
-class Monad m => Context a m where
-    ctx :: m a
-    fctx :: (a -> b) -> m b
-    fctx f = fmap f ctx
+-- Get is a wrapper around Reader
+class Monad m => Get a m where
+    get :: m a
+    gets :: (a -> b) -> m b
+    gets f = fmap f get
 
-type family Contexts k m :: Constraint where
-    Contexts '[] _ = ()
-    Contexts (k : ks) m = (Context k m, Contexts ks m)
+type family Gets k m :: Constraint where
+    Gets '[] _ = ()
+    Gets (k : ks) m = (Get k m, Gets ks m)
+
+-- Set is a wrapper around State
+class Get a m => Set a m where
+    set :: a -> m a
+    sets :: (a -> a) -> m a
+    sets f = gets f >>= set
+
+type family Sets k m :: Constraint where
+    Sets '[] _ = ()
+    Sets (k : ks) m = (Set k m, Sets ks m)
 
 class Functor f => Property (a :: Symbol) f where
     type Key a :: Type
     prop :: f (Key a)
-
-instance (Context Message m, Functor m) => Property "author" m where
-    type Key "author" = User
-    prop = fctx @Message messageAuthor
 
 class Exposes a b where
     exp :: a -> b

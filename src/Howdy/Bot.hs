@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Howdy.Bot ( BotData (..)
                  , BotBuilder (..)
                  , Bot (..)
@@ -10,11 +8,8 @@ module Howdy.Bot ( BotData (..)
                  , bot
                  ) where
 
-import           Howdy.Internal.Bot.Builder (BotBuilder (..), BotData (..),
-                                             command, prefix, prefixes,
-                                             reaction)
-
-import           Howdy.Internal.Bot.Run     (Bot (..), mkBot, runBot)
+import           Howdy.Internal.Bot.Builder (BotBuilder (..))
+import           Howdy.Internal.Bot.Run     (Bot (..), runBot)
 
 bot :: BotBuilder () -> IO ()
-bot = runBot . mkBot
+bot = runBot . build

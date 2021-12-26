@@ -26,14 +26,14 @@ import           Discord.Types                 (Emoji (emojiName), Event (..),
                                                 ReactionInfo (reactionChannelId, reactionEmoji, reactionMessageId, reactionUserId),
                                                 User (userId))
 import           Howdy.Discord.Class           (MonadDiscord (catchDiscord, liftDiscord))
-import           Howdy.Internal.Action.Builder (CommandData (getAlias, getRunner),
-                                                ReactionData (reactionRunner))
-import qualified Howdy.Internal.Action.Builder as Reaction (ReactionData (reactionEmoji))
+import           Howdy.Internal.Action.Builder (ActionBuilderData (..),
+                                                CommandBuilderData,
+                                                ReactionBuilderData)
 import           Howdy.Internal.Action.Run     (CommandRunner (runCommand),
                                                 MonadExec (exec),
                                                 ReactionRunner)
 import           Howdy.Internal.Bot.Builder    (BotBuilder (BotBuilder),
-                                                BotData (..))
+                                                BotBuilderData (..))
 import           Howdy.Internal.Error          (HowdyException (..))
 import           Howdy.Internal.Help           (help)
 import           Howdy.Internal.Parser.Class   (MonadParse (..))
@@ -42,8 +42,8 @@ import           Prelude                       hiding (or)
 import           System.Environment            (getEnv)
 
 --type PrefixesStore = [Text]
-type CommandsStore = HashMap Text CommandData
-type ReactionsStore = HashMap Text ReactionData
+type CommandsStore = HashMap Text CommandBuilderData
+type ReactionsStore = HashMap Text ReactionBuilderData
 
 data Bot = Bot { prefixesStore  :: [Text]
                , commandsStore  :: CommandsStore
@@ -52,27 +52,6 @@ data Bot = Bot { prefixesStore  :: [Text]
 
 convertTextList :: [Text] -> HashSet Text
 convertTextList = S.fromList
-
-preprocessCommand :: CommandData -> (Text, CommandData)
-preprocessCommand cd = (head $ getAlias cd, cd)
-
-convertCommands :: [CommandData] -> HashMap Text CommandData
-convertCommands = M.fromList . fmap preprocessCommand
-
-preprocessReaction :: ReactionData -> (Text, ReactionData)
-preprocessReaction rd = (head $ Reaction.reactionEmoji rd, rd)
-
-convertReactions :: [ReactionData] -> HashMap Text ReactionData
-convertReactions = M.fromList . fmap preprocessReaction
-
-mkBot :: BotBuilder () -> Bot
-mkBot (BotBuilder bb) = Bot { prefixesStore = getPrefixes b
-                            , commandsStore = convertCommands (help coms : coms)
-                            , reactionsStore = convertReactions recs
-                            }
-                      where b = execWriter bb
-                            coms = getCommands b
-                            recs = getReactions b
 
 runBot :: Bot -> IO ()
 runBot b = do
@@ -104,7 +83,8 @@ messageHandler b = do
     prefix <- parse $ firstof string $ prefixesStore b
     alias <- parse word
     cmd <- liftMaybe CommandMissing $ commandsStore b !? alias
-    getRunner cmd
+    runCommand $ a_runner cmd
+    pure ()
 
 reactionHandler :: Bot -> ReactionInfo -> ReactionRunner ()
 reactionHandler b r = do

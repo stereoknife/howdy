@@ -22,7 +22,7 @@ import           Data.Semigroup              (Semigroup)
 import           Data.Text                   (Text)
 import           Discord                     (DiscordHandler)
 import           Discord.Types               (Message, User)
-import           Howdy.Context               (Context (ctx))
+import           Howdy.Context               (Get (get))
 import           Howdy.Discord.Class         (MonadDiscord (liftDiscord),
                                               MonadReply)
 import           Howdy.Internal.Error        (HowdyException (..))
@@ -50,11 +50,11 @@ instance MonadReply CommandRunner
 instance MonadExec (Text, Message, User) CommandRunner where
     exec (t, m, u) = fmap (fromRight def) . runExceptT . flip runReaderT (m, u) . flip evalStateT t . runCommand
 
-instance Context Message CommandRunner where
-    ctx = asks fst
+instance Get Message CommandRunner where
+    get = asks fst
 
-instance Context User CommandRunner where
-    ctx = asks snd
+instance Get User CommandRunner where
+    get = asks snd
 
 instance Alternative CommandRunner where
   empty = throwError CommandMissing
@@ -71,11 +71,11 @@ instance MonadReply ReactionRunner
 instance MonadExec (Message, User) ReactionRunner where
     exec e = fmap (fromRight def) . runExceptT . flip runReaderT e . runReaction
 
-instance Context Message ReactionRunner where
-    ctx = asks fst
+instance Get Message ReactionRunner where
+    get = asks fst
 
-instance Context User ReactionRunner where
-    ctx = asks snd
+instance Get User ReactionRunner where
+    get = asks snd
 
 instance Alternative ReactionRunner where
   empty = throwError ReactionMissing

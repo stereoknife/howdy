@@ -1,40 +1,63 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Howdy.Internal.Bot.Builder where
 
 import           Control.Monad.Writer          (MonadWriter (tell), Writer,
                                                 WriterT (WriterT), execWriter)
+import           Data.HashMap.Strict           (HashMap, findWithDefault, (!?))
+import qualified Data.HashMap.Strict           as M
 import           Data.Text                     (Text)
-import           Howdy.Internal.Action.Builder (CommandBuilder (run_CB),
-                                                CommandData,
-                                                ReactionBuilder (run_RB),
-                                                ReactionData (ReactionData))
+import           Discord.Types                 (UserId)
+import           Howdy.Internal.Action.Builder (CommandBuilderData, ReactionBuilderData, CommandBuilder, ReactionBuilder)
+import           Howdy.Internal.Builder        (Builder (..))
 
-data BotData = BotData { getPrefixes  :: [Text]
-                       , getCommands  :: [CommandData]
-                       , getReactions :: [ReactionData]
-                       }
+type CommandsStore = HashMap Text CommandBuilderData
+type ReactionsStore = HashMap Text ReactionBuilderData
 
-instance Semigroup BotData where
-    a <> b = BotData { getPrefixes  = getPrefixes a <> getPrefixes b
-                     , getCommands  = getCommands a <> getCommands b
-                     , getReactions = getReactions a <> getReactions b
-                     }
+data Bot = Bot { botPrefixes  :: [Text]
+               , botCommands  :: CommandsStore
+               , botReactions :: ReactionsStore
+               }
 
-instance Monoid BotData where
-    mempty = BotData mempty mempty mempty
+data BotBuilderData = BotBuilderData { bbPrefixes  :: [Text]
+                                     , bbCommands  :: [CommandBuilder]
+                                     , bbReactions :: [ReactionBuilder]
+                                     , bbAdmins    :: [UserId]
+                                     }
 
-newtype BotBuilder a = BotBuilder {run_BB :: Writer BotData a}
-    deriving (Functor, Applicative, Monad, MonadWriter BotData)
+instance Semigroup BotBuilderData where
+    a <> b = BotBuilderData { bbPrefixes  = bbPrefixes a <> bbPrefixes b
+                            , bbCommands  = bbCommands a <> bbCommands b
+                            , bbReactions = bbReactions a <> bbReactions b
+                            , bbAdmins    = bbAdmins a <> bbAdmins b
+                            }
 
-command :: CommandBuilder () -> BotBuilder ()
-command c = tell $ mempty{getCommands = [execWriter $ run_CB c]}
+instance Monoid BotBuilderData where
+    mempty = BotBuilderData mempty mempty mempty mempty
+
+newtype BotBuilder a = BotBuilder (Writer BotBuilderData a)
+    deriving (Functor, Applicative, Monad, MonadWriter BotBuilderData)
+
+instance Builder (BotBuilder a) where
+    type BuilderOutput (BotBuilder a) = Bot
+    build (BotBuilder bb) = Bot { botPrefixes = bbPrefixes b
+                                , botCommands = M.fromList $ fmap build commands
+                                , botReactions = M.fromList $ fmap build reactions
+                                }
+                      where b         = execWriter bb
+                            commands  = let c = bbCommands b in c --(help c:c)
+                            reactions = bbReactions b
+
+command :: CommandBuilder -> BotBuilder ()
+command c = tell $ mempty{bbCommands = [c]}
 
 prefix :: Text -> BotBuilder ()
-prefix p = tell $ mempty{getPrefixes = [p]}
+prefix p = tell $ mempty{bbPrefixes = [p]}
 
 prefixes :: [Text] -> BotBuilder ()
-prefixes p = tell $ mempty{getPrefixes = p}
+prefixes p = tell $ mempty{bbPrefixes = p}
 
-reaction :: ReactionBuilder () -> BotBuilder ()
-reaction r = tell $ mempty{getReactions = [execWriter $ run_RB r]}
+reaction :: ReactionBuilder -> BotBuilder ()
+reaction r = tell $ mempty{bbReactions = [r]}
