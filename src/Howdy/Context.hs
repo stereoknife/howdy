@@ -11,6 +11,7 @@ module Howdy.Context where
 
 import           Data.Kind    (Constraint, Type)
 import           GHC.TypeLits (Symbol)
+import Data.Proxy (Proxy (Proxy))
 
 -- Get is a wrapper around Reader
 class Monad m => Get a m where
@@ -24,8 +25,8 @@ type family Gets k m :: Constraint where
 
 -- Set is a wrapper around State
 class Get a m => Set a m where
-    set :: a -> m a
-    sets :: (a -> a) -> m a
+    set :: a -> m ()
+    sets :: (a -> a) -> m ()
     sets f = gets f >>= set
 
 type family Sets k m :: Constraint where
@@ -36,5 +37,9 @@ class Functor f => Property (a :: Symbol) f where
     type Key a :: Type
     prop :: f (Key a)
 
-class Exposes a b where
-    exp :: a -> b
+class Expose k d where
+    expose :: d -> k
+
+type family Exposes k d :: Constraint where
+    Exposes '[] _ = ()
+    Exposes (k : ks) d = (Expose k d, Exposes ks d)

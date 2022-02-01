@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+
 module Howdy.Internal.Builder where
 import           Data.Kind (Type)
 

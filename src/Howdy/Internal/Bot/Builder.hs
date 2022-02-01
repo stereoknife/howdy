@@ -10,7 +10,10 @@ import           Data.HashMap.Strict           (HashMap, findWithDefault, (!?))
 import qualified Data.HashMap.Strict           as M
 import           Data.Text                     (Text)
 import           Discord.Types                 (UserId)
-import           Howdy.Internal.Action.Builder (CommandBuilderData, ReactionBuilderData, CommandBuilder, ReactionBuilder)
+import           Howdy.Internal.Action.Builder (CommandBuilder,
+                                                CommandBuilderData,
+                                                ReactionBuilder,
+                                                ReactionBuilderData)
 import           Howdy.Internal.Builder        (Builder (..))
 
 type CommandsStore = HashMap Text CommandBuilderData
@@ -22,8 +25,8 @@ data Bot = Bot { botPrefixes  :: [Text]
                }
 
 data BotBuilderData = BotBuilderData { bbPrefixes  :: [Text]
-                                     , bbCommands  :: [CommandBuilder]
-                                     , bbReactions :: [ReactionBuilder]
+                                     , bbCommands  :: [CommandBuilder ()]
+                                     , bbReactions :: [ReactionBuilder ()]
                                      , bbAdmins    :: [UserId]
                                      }
 
@@ -50,7 +53,7 @@ instance Builder (BotBuilder a) where
                             commands  = let c = bbCommands b in c --(help c:c)
                             reactions = bbReactions b
 
-command :: CommandBuilder -> BotBuilder ()
+command :: CommandBuilder () -> BotBuilder ()
 command c = tell $ mempty{bbCommands = [c]}
 
 prefix :: Text -> BotBuilder ()
@@ -59,5 +62,5 @@ prefix p = tell $ mempty{bbPrefixes = [p]}
 prefixes :: [Text] -> BotBuilder ()
 prefixes p = tell $ mempty{bbPrefixes = p}
 
-reaction :: ReactionBuilder -> BotBuilder ()
+reaction :: ReactionBuilder () -> BotBuilder ()
 reaction r = tell $ mempty{bbReactions = [r]}

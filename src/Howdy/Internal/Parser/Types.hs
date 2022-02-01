@@ -1,14 +1,18 @@
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Howdy.Internal.Parser.Types ( Parser (..) ) where
 
 import           Control.Applicative (Alternative (..))
 import           Data.Text           (Text)
 
+-- Parser turns text into a data structure
+-- Parsing may fail
+-- Parsing may be partial
+
+data Result a = Success a Text
+              | Fail Text
 
 newtype Parser a = Parser { runParser :: Text -> Maybe (a, Text) }
 

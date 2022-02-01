@@ -21,25 +21,24 @@ category:           Web
 
 library
     exposed-modules:
-        Howdy
         Howdy.Parser
-        Howdy.Bot
         Howdy.Context
-        Howdy.Action
-        Howdy.Discord.Class
+        Howdy.Effects.Discord
+        Howdy.Effects.Parse
         Howdy.Error
 
     -- Modules included in this library but not exported.
-    other-modules:
+    --other-modules:
+        Howdy.Internal.Builder
         Howdy.Internal.Bot.Builder
-        Howdy.Internal.Bot.Run
+        Howdy.Internal.Action.Builder
+        Howdy.Internal.Error
         Howdy.Internal.Parser.Class
         Howdy.Internal.Parser.Cons
+        Howdy.Internal.Parser.ConsR
+        Howdy.Internal.Parser.Trans
+        Howdy.Internal.Parser.TransR
         Howdy.Internal.Parser.Types
-        Howdy.Internal.Action.Builder
-        Howdy.Internal.Action.Run
-        Howdy.Internal.Error
-        Howdy.Internal.Help
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
