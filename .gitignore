@@ -3,13 +3,12 @@
 .nova/
 .vscode/
 
-# Builds
+# Cabaö
 dist*/
-build*/
+cabal.project.local
 
 # Secrets
 **/*.secret
 
 # Other files
 .DS_Store
-cabal.project.local

@@ -1,4 +1,4 @@
-cabal-version:      3.0
+cabal-version:      3.6
 name:               howdy
 version:            0.1.0.2
 synopsis:           A simple Discord bot framework built on discord-haskell
@@ -21,31 +21,33 @@ category:           Web
 
 library
     exposed-modules:
-        Howdy.Parser
-        Howdy.Context
-        Howdy.Effects.Discord
-        Howdy.Effects.Parse
-        Howdy.Error
+        -- Howdy.Parser
+        -- Howdy.Context
+        -- Howdy.Effects.Discord
+        -- Howdy.Effects.Parse
+        -- Howdy.Error
+        Discord.Application.Command
+        Discord.Application.Command.Request
 
     -- Modules included in this library but not exported.
     --other-modules:
-        Howdy.Internal.Builder
-        Howdy.Internal.Bot.Builder
-        Howdy.Internal.Action.Builder
-        Howdy.Internal.Error
-        Howdy.Internal.Parser.Class
-        Howdy.Internal.Parser.Cons
-        Howdy.Internal.Parser.ConsR
-        Howdy.Internal.Parser.Trans
-        Howdy.Internal.Parser.TransR
-        Howdy.Internal.Parser.Types
+        -- Howdy.Internal.Builder
+        -- Howdy.Internal.Bot.Builder
+        -- Howdy.Internal.Action.Builder
+        -- Howdy.Internal.Error
+        -- Howdy.Internal.Parser.Class
+        -- Howdy.Internal.Parser.Cons
+        -- Howdy.Internal.Parser.ConsR
+        -- Howdy.Internal.Parser.Trans
+        -- Howdy.Internal.Parser.TransR
+        -- Howdy.Internal.Parser.Types
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-          base                 ^>= 4.14.0.0
+          base                 ^>= 4.16.0.0
         , data-default         ^>= 0.7.1.1
-        , discord-haskell      ^>= 1.8.1
+        -- , discord-haskell      ^>= 1.8.1
         , mtl                  ^>= 2.2.2
         , text                 ^>= 1.2.4.1
         , unordered-containers ^>= 0.2.14.0
