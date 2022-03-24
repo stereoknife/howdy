@@ -1,100 +1,94 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE FunctionalDependencies     #-}
-{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Howdy.Internal.Action.Builder where
 
+import           Control.Monad.Catch       (MonadThrow)
 import           Control.Monad.Except      (ExceptT, MonadError)
 import           Control.Monad.IO.Class    (MonadIO)
+import           Control.Monad.Reader      (MonadReader)
 import           Control.Monad.State       (MonadState, StateT)
 import           Control.Monad.Writer      (MonadWriter (tell), Writer,
                                             execWriter)
 import           Data.Default              (Default (def))
+import           Data.Kind                 (Type, Constraint)
 import           Data.Semigroup            (Semigroup)
 import           Data.Text                 (Text)
 import           Discord                   (DiscordHandler)
-import           Discord.Types             (Emoji)
-import           Howdy.Discord.Class       (MonadDiscord)
-import           Howdy.Internal.Action.Run (CommandRunner, ReactionRunner)
-import           Howdy.Parser              (MonadParse)
+import           Discord.Types             (Emoji, GuildId, Message, User,
+                                            UserId)
+import           Howdy.Effects.Discord       (Discord, Reply)
+import           Howdy.Error               (HowdyException)
+import           Howdy.Internal.Builder    (Builder (..))
+import           Howdy.Parser              (Parse)
+import Howdy.Context (Gets)
 
-data CommandData = CommandData { getAlias       :: [Text]
-                               , getDesc        :: Text
-                               , getRunner      :: CommandRunner ()
-                               , getSubcommands :: [CommandData]
-                               }
+data ActionType = Command | Reaction
 
-data ReactionData = ReactionData { reactionEmoji  :: [Text]
-                                 , reactionDesc   :: Text
-                                 , reactionRunner :: ReactionRunner ()
-                                 }
+newtype ActionBuilder (t :: ActionType) a = ActionBuilder { buildAction :: Writer (ActionBuilderData t) a}
+    deriving (Functor, Applicative, Monad, MonadWriter (ActionBuilderData t))
 
-instance Semigroup CommandData where
-    a <> b = CommandData
-             (getAlias a <> getAlias b)
-             (getDesc a <> getDesc b)
-             (getRunner a >> getRunner b)
-             (getSubcommands a <> getSubcommands b)
+type CommandBuilder = ActionBuilder 'Command
+type ReactionBuilder = ActionBuilder 'Reaction
 
-instance Semigroup ReactionData where
-    a <> b = ReactionData
-             (reactionEmoji a <> reactionEmoji b)
-             (reactionDesc a <> reactionDesc b)
-             (reactionRunner a >> reactionRunner b)
+data ActionBuilderData (t :: ActionType) =
+    ActionBuilderData { a_alias      :: [Text]                                          -- ^ List of aliases for a command, first one is default
+                      , a_desc       :: Text                                            -- ^ Description, it will show in help
+                      , a_runner     :: DiscordHandler ()
+                      , a_perm       :: UserId  -> GuildId -> Bool                      -- ^ Permissions function, returns true or false when given a user and a guild
+                      , a_subactions :: [ActionBuilderData t]                           -- ^ Subcommands (not used for reactions)
+                      }
 
-instance Monoid CommandData where
-    mempty = CommandData mempty mempty (pure ()) mempty
+type CommandBuilderData = ActionBuilderData 'Command
+type ReactionBuilderData = ActionBuilderData 'Reaction
 
-instance Monoid ReactionData where
-    mempty = ReactionData mempty mempty (pure ())
+instance Semigroup (ActionBuilderData t) where
+    a <> b = ActionBuilderData
+             (a_alias a <> a_alias b)
+             (a_desc a <> a_desc b)
+             (a_runner a *> a_runner b)
+             (\u g -> a_perm a u g && a_perm b u g)
+             (a_subactions a <> a_subactions b)
 
-newtype CommandBuilder a = CommandBuilder { run_CB :: Writer CommandData a}
-    deriving (Functor, Applicative, Monad, MonadWriter CommandData)
+instance Builder (ActionBuilder t a) where
+    type BuilderOutput (ActionBuilder t a) = (Text, ActionBuilderData t)
+    build a = (head (a_alias d), d)
+        where d = execWriter $ buildAction a
 
-newtype ReactionBuilder a = ReactionBuilder { run_RB :: Writer ReactionData a}
-    deriving (Functor, Applicative, Monad, MonadWriter ReactionData)
+instance Monoid (ActionBuilderData t) where
+    mempty = ActionBuilderData mempty mempty (pure ()) everyone mempty
 
--- Command Functions
+-- | Add an alias to a command, it appends to existing aliases
+alias :: Text -> ActionBuilder 'Command ()
+alias a = tell $ mempty{a_alias = [a]}
 
-class ActionBuilder r m | m -> r where
-    a_id :: Text -> m ()
-    a_ids :: [Text] -> m ()
-    a_desc :: Text -> m ()
-    a_run :: r () -> m ()
-    a_sub :: m () -> m ()
+-- | Add multiple aliases to a command, it appends to existing aliases
+aliases :: [Text] -> ActionBuilder 'Command ()
+aliases a = tell $ mempty{a_alias = a}
 
-instance ActionBuilder CommandRunner CommandBuilder where
-    a_id a = tell $ mempty{getAlias = [a]}
-    a_ids a = tell $ mempty{getAlias = a}
-    a_desc d = tell $ mempty{getDesc = d}
-    a_run r = tell $ mempty{getRunner = r}
-    a_sub m = tell $ mempty{getSubcommands = [execWriter $ run_CB m]}
+-- | Add emoji that will trigger a reaction
+emoji :: Text -> ActionBuilder 'Reaction ()
+emoji a = tell $ mempty{a_alias = [a]}
 
-instance ActionBuilder ReactionRunner ReactionBuilder where
-    a_id i = tell $ mempty{reactionEmoji = [i]}
-    a_ids i = tell $ mempty{reactionEmoji = i}
-    a_desc d = tell $ mempty{reactionDesc = d}
-    a_run r = tell $ mempty{reactionRunner = r}
-    a_sub m = pure ()
+-- | Set description of command or reaction, it will show when the help command is used
+description :: Text -> ActionBuilder t ()
+description d = tell $ mempty{a_desc = d}
 
--- these should be a typeclass
+-- | Set the command or reaction to run
+run :: DiscordHandler () -> ActionBuilder t ()
+run a = tell $ mempty{a_runner = a}
 
-alias :: Text -> CommandBuilder ()
-alias a = tell $ mempty{getAlias = [a]}
+-- | Add a subcommand
+subcommand :: ActionBuilder 'Command () -> ActionBuilder 'Command ()
+subcommand s = tell $ mempty{a_subactions = [execWriter $ buildAction s]}
 
-aliases :: [Text] -> CommandBuilder ()
-aliases a = tell $ mempty{getAlias = a}
-
-desc :: Text -> CommandBuilder ()
-desc d = tell $ mempty{getDesc = d}
-
-action :: CommandRunner () -> CommandBuilder ()
-action a = tell $ mempty{getRunner = a}
-
-subcommand :: CommandBuilder () -> CommandBuilder ()
-subcommand s = tell $ mempty{getSubcommands = [execWriter $ run_CB s]}
-
-
+-- | Permission function that always returns True
+everyone :: a -> b -> Bool
+everyone _ _ = True

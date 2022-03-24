@@ -1,7 +1,5 @@
-{-# LANGUAGE ViewPatterns #-}
-
 module Howdy.Parser ( Parser (..)
-                    , MonadParse (..)
+                    , Parse (..)
                     , char
                     , notChar
                     , anyChar
@@ -15,7 +13,7 @@ module Howdy.Parser ( Parser (..)
                     , whitespace
                     ) where
 
-import           Howdy.Internal.Parser.Class (MonadParse (..))
+import           Howdy.Internal.Parser.Class (Parse (..))
 import           Howdy.Internal.Parser.Cons  (anyChar, char, chars, firstof,
                                               flag, notChar, rest, string, text,
                                               whitespace, word)
