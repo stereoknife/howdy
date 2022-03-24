@@ -1,4 +1,0 @@
-packages:
-    local-packages/hs-memory/memory.cabal
-    local-packages/req/req.cabal
-    howdy.cabal
