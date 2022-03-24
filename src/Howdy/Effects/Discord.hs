@@ -47,7 +47,7 @@ class (Gets [ChannelId, UserId, MessageId] m, Discord m, MonadError HowdyExcepti
         mg <- get @MessageId 
         catchDiscord $ restCall $ R.CreateReaction (ch, mg) $ emojiName e
 
-    embed e = do
-        ch <- get @ChannelId
-        catchDiscord $ restCall $ R.CreateMessageEmbed ch "" e
-        pure ()
+    -- embed e = do
+    --     ch <- get @ChannelId
+    --     catchDiscord $ restCall $ R.CreateMessageEmbed ch "" e
+    --     pure ()
