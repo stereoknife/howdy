@@ -1,5 +1,4 @@
 module Howdy.Parser ( Parser (..)
-                    , Parse (..)
                     , char
                     , notChar
                     , anyChar
@@ -11,9 +10,10 @@ module Howdy.Parser ( Parser (..)
                     , rest
                     , firstof
                     , whitespace
+                    , parse
                     ) where
 
-import           Howdy.Internal.Parser.Class (Parse (..))
+import           Howdy.Internal.Parser.Class (parse)
 import           Howdy.Internal.Parser.Cons  (anyChar, char, chars, firstof,
                                               flag, notChar, rest, string, text,
                                               whitespace, word)

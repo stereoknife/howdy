@@ -12,13 +12,14 @@ module Howdy.Effects.Discord ( module Discord.Types
 import           Control.Monad.Catch   (MonadThrow)
 import           Control.Monad.Except  (MonadError, void)
 import           Data.Text             (Text)
-import           Discord               (DiscordHandler, FromJSON, restCall)
+import           Discord               (DiscordHandler, FromJSON, restCall, def)
 import           Discord.Internal.Rest (Request)
 import qualified Discord.Requests      as R
 import           Discord.Types
 import           Howdy.Context         (Get (get), Gets)
 import           Howdy.Error           (catch)
 import           Howdy.Internal.Error  (HowdyException, KnownError)
+import Discord.Internal.Rest.Channel (MessageDetailedOpts(messageDetailedEmbeds))
 
 
 
@@ -47,7 +48,9 @@ class (Gets [ChannelId, UserId, MessageId] m, Discord m, MonadError HowdyExcepti
         mg <- get @MessageId 
         catchDiscord $ restCall $ R.CreateReaction (ch, mg) $ emojiName e
 
-    -- embed e = do
-    --     ch <- get @ChannelId
-    --     catchDiscord $ restCall $ R.CreateMessageEmbed ch "" e
-    --     pure ()
+    embed e = do
+        ch <- get @ChannelId
+        catchDiscord $ restCall $ R.CreateMessageDetailed ch $ def {
+            messageDetailedEmbeds = Just [e]
+        }
+        pure ()

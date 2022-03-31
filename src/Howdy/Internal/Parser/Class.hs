@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Howdy.Internal.Parser.Class where
 
@@ -11,16 +12,8 @@ import           Data.Text                   (Text)
 import           Howdy.Internal.Error        (HowdyException (ParseError))
 import           Howdy.Internal.Parser.Cons  (rest)
 import           Howdy.Internal.Parser.Types (Parser (runParser))
-
-class Monad m => Parse m where
-    parse :: Parser a -> m a
+import Howdy.Error (report)
 
 
-instance (Monad m, MonadError HowdyException m) => Parse (StateT Text m) where
-    parse p = do
-        t <- get
-        (v, rest) <- liftEither $ handleE $ runParser p t
-        put rest
-        pure v
-        where handleE Nothing  = Left ParseError
-              handleE (Just v) = Right v
+parse :: MonadError HowdyException m => Parser a -> Text -> m (a, Text)
+parse p t = report ParseError $ runParser p t

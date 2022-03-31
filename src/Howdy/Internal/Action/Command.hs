@@ -1,33 +1,16 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NoFieldSelectors #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Howdy.Internal.Action.Command where
 
-import Discord (DiscordHandler)
+import Discord ( def, DiscordHandler )
 import Data.Text ( Text )
-import Data.Hashable (Hashable (hash))
-import Data.Kind (Constraint)
-import GHC.Records (HasField)
-import Howdy.Parser (Parser (runParser), firstof, string)
-import Discord.Types (UserId, GuildId, ChannelId, Message (messageContent))
-import Howdy.Effects.Discord (Discord)
-import Control.Monad.Except (MonadError)
-import Howdy.Internal.Error (HowdyException)
-import Data.Data (dataTypeName, Data (dataTypeOf))
-import Data.Functor.Classes (Show1 (liftShowsPrec), showsUnaryWith, showsPrec1)
-import Data.Bifunctor (Bifunctor(..))
-import Control.Monad.Free
-import Control.Monad.Free.Church
-import Data.Default (Default (def))
+import Data.Hashable ( Hashable(hash) )
+import Control.Monad.Free ( Free(Free), liftF )
+import Data.Default ( Default(..) )
 
 type TY_Permission = Bool
 type TY_Runner = DiscordHandler ()
@@ -97,15 +80,3 @@ permission x = liftF (Permission x ())
 
 run :: TY_Runner -> CommandBuilder ()
 run x = liftF (Runner x ())
-
--- Something Else --
-
-data CommandInput = CommandInput { target  :: Int
-                                 , user    :: UserId
-                                 , guild   :: Maybe GuildId
-                                 , channel :: ChannelId
-                                 , args    :: Text
-                                 }
-
-permit :: MonadError HowdyException m => CommandRunner -> CommandInput -> m ()
-permit = undefined
