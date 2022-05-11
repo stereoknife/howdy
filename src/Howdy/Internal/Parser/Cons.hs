@@ -8,6 +8,8 @@ import           Data.Char                   (isSpace)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Howdy.Internal.Parser.Types (Parser (..))
+import Data.Maybe (isJust, fromMaybe)
+import Data.Bifunctor (first)
 
 char :: Char -> Parser Char
 char c = anyChar `when` (c ==)
@@ -39,8 +41,12 @@ text c = T.pack <$> some (anyChar `unless` c)
 word :: Parser Text
 word = many whitespace >> text isSpace
 
-flag :: Parser Text
-flag = string "--" >> text isSpace
+opt :: Parser a -> Parser (Maybe a)
+opt p = Parser $ \s ->
+            Just $ maybe (Nothing, s) (first Just) $ runParser p s
+
+flag :: Text -> Parser Bool
+flag = fmap isJust . opt . string
 
 rest :: Parser Text
 rest = Parser $ flip (curry Just) ""
