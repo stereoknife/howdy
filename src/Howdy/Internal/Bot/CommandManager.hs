@@ -12,94 +12,105 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Howdy.Internal.Bot.CommandManager where
-
-import Discord.Internal.Rest
-    ( Message(messageContent, messageChannelId, messageGuildId,
-              messageAuthor),
-      User(userId) )
-import Data.Aeson ( FromJSON )
-import Discord (RestCallErrorCode, DiscordHandler, restCall)
-import Control.Monad.Free (Free, liftF)
-import Data.HashMap.Strict ( HashMap, (!?) )
-import Data.Text
-import Howdy.Internal.Command
-    ( CommandData,
-      CommandInput(CommandInput, target),
-      CommandPreferences(runner, permission) )
-import Control.Monad.Reader
-    ( ReaderT, when, MonadReader(ask), unless, asks )
+import Discord ( DiscordHandler )
+import Discord.Types
+    ( Message(messageContent, messageReference, messageChannelId,
+              messageGuildId, messageAuthor) )
 import Howdy.Internal.Bot.Builder
-    ( BotData, BotPreferences(prefixes, aliases, commands) )
-import Control.Monad.Except ( MonadError(..) )
+    ( BotPreferences(prefixes, commands, aliases) )
 import Howdy.Error
-    ( HowdyException(ForbiddenCommand, Ignore, DiscordError,
-                     UnknownIdentifier, CommandNotFound),
-      contain,
+    ( MonadError(..),
+      HowdyException(ForbiddenCommand, Ignore, UnknownIdentifier,
+                     DiscordError, CommandNotFound),
       report )
-import Control.Monad.Trans.Free (FreeT, MonadFree, runFreeT, runFree)
-import Discord.Requests (ChannelRequest(CreateMessage, GetChannel))
+import Control.Monad.Trans.Except ( ExceptT, runExceptT )
+import Data.Text (Text)
 import Howdy.Internal.Parser.Class ( parse, parseWithError )
-import Howdy.Internal.Parser.Cons ( string, word, firstof, flag )
-import Howdy.Internal.Discord (MonadDiscord (liftDiscord), DiscordRequest, request)
-import GHC.Records ( HasField )
+import Howdy.Internal.Parser.Cons
+    ( firstof, flag, string, word )
+import Howdy.Internal.Command
+    ( CommandInput(..),
+      CommandPreferences(..) )
+import Data.HashMap.Lazy ((!?))
+import Control.Monad (unless)
+import Control.Monad.Reader (runReaderT, ReaderT, MonadTrans (lift))
 
+{-
+Steps to manage commands:
 
-type CommandStore = HashMap Text CommandData
-type AliasStore = HashMap Text Text
+Requisites:
+- A reader (or other kind of environment) that holds commands and reactions
+- Error handling/catching
+- A way to manipulate errors later on in a similar way to functioning procedure or whatever
 
-type BotRunner = ReaderT BotData
+  ┌ Discord ───────────┐
+  │ Fetch Command      │
+  │                    │
+  │┌ Discord, Error ──┐│
+  ││ Execute command  ││
+  │└──────────────────┘│
+  │                    │
+  │ Handle Error       │
+  └────────────────────┘
+-}
 
-commandHandler :: (MonadReader BotPreferences m, MonadDiscord m, MonadError HowdyException m, HasField "runner" CommandPreferences (CommandInput -> m ())) => Message -> m ()
-commandHandler m = do b <- ask
-                      -- Match and discard prefix
-                      (_, rest) <- parseWithError Ignore (firstof string b.prefixes) m.messageContent
-                      -- Match and set Debug flag
-                      (debug, rest') <- parse (flag "#debug") rest
+type Command = String
 
-                      -- Handling error responses here
-                      flip catchError (errorHandler debug) $ do
-                        -- Get command input
-                        ci <- processInput m rest'
-                        -- Get command
-                        cr <- fetchCommand ci.target
-                        -- Check permissions
-                        permit cr ci
-                        -- Run command
-                        cr.runner ci
+commandHandler :: Message -> BotPreferences -> DiscordHandler ()
+commandHandler m b = do
+                  a <- runExceptT $ dealWithCommand m b
+                  pure $ either (const ()) id a
 
-errorHandler :: (MonadReader BotPreferences m, MonadDiscord m, MonadError HowdyException m) => Bool -> HowdyException -> m ()
-errorHandler d (DiscordError code) = when d doNothing
-errorHandler d (CommandNotFound) = when d doNothing
-errorHandler d (ForbiddenCommand) = when d doNothing
-errorHandler d (_) = doNothing
+dealWithCommand :: Message -> BotPreferences -> ExceptT HowdyException DiscordHandler ()
+dealWithCommand m b = do -- Match and discard prefix
+                         (_, rest) <- parseWithError Ignore (firstof string b.prefixes) m.messageContent
+                         -- Match and set Debug flag
+                         (debug, rest') <- parse (flag "#debug") rest
+                         -- Get command input
+                         let err = runExceptT $ do
+                                   ci <- buildInput m rest'
+                                   -- Get command
+                                   cr <- fetchCommand b ci.target
+                                   -- Check permissions
+                                   permit cr ci
+                                   -- Run command
+                                   cr.runner ci
+                                   -- Handle errors
+                                   -- Use cont here ????
+                                   -- catchE handleError debug
+                         lift $ do
+                                e <- err
+                                case e of Left e' -> errorHandler debug e'
+                                          Right _ -> pure ()
 
-processInput :: (MonadError HowdyException m) => Message -> Text -> m CommandInput
-processInput m t = do (target, args) <- parse word t
-                      let user = m.messageAuthor.userId
-                          guild = m.messageGuildId
-                          channel = m.messageChannelId
-                      pure $ CommandInput target user guild channel args
+fetchCommand :: MonadError HowdyException m => BotPreferences -> Text -> m CommandPreferences
+fetchCommand b a = do let aliases = b.aliases
+                          coms = b.commands
+                      id <- report UnknownIdentifier $ aliases !? a
+                      report CommandNotFound $ coms !? id
 
-fetchCommand :: (MonadReader BotPreferences m, MonadError HowdyException m) => Text -> m CommandPreferences
-fetchCommand a = do aliases <- asks (.aliases)
-                    coms <- asks (.commands)
-                    id <- report UnknownIdentifier $ aliases !? a
-                    report CommandNotFound $ coms !? id
-                    
+buildInput :: (MonadError HowdyException m) => Message -> Text -> m CommandInput
+buildInput m t = do (target, args) <- parse word t
+                    let user = m.messageAuthor
+                        guild = m.messageGuildId
+                        channel = m.messageChannelId
+                        ref = m.messageReference
+                    pure $ CommandInput target user guild channel args ref
 
 permit :: MonadError HowdyException m => CommandPreferences -> CommandInput -> m ()
 permit p i = unless (p.permission i) $ throwError ForbiddenCommand
 
+errorHandler :: Bool -> HowdyException -> DiscordHandler ()
+errorHandler debug = \case -- it has cleaner syntax for many alternatives ok
+    DiscordError code -> doNothing
+    CommandNotFound -> doNothing
+    ForbiddenCommand -> doNothing
+    _ -> doNothing
 
-ext :: (MonadReader BotPreferences m, MonadError HowdyException m, MonadDiscord m, FromJSON a) => DiscordRequest a -> m a
-ext d = do c <- liftDiscord $ request d
-           contain c
-
-
--- thing takes discord req & returns readerT of IO
-
--- convenience alias
-doNothing :: Applicative m => m ()
+doNothing :: DiscordHandler ()
 doNothing = pure ()

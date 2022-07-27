@@ -25,6 +25,9 @@ library
         Howdy.Error
         Howdy.Secrets
         Howdy.Bot
+        Howdy.Command
+        Howdy.Discord
+        Control.Optics
 
     -- Modules included in this library but not exported.
     --other-modules:
@@ -41,14 +44,16 @@ library
         Howdy.Internal.Bot.Lifecycle
         Howdy.Internal.Bot.Debug
         Howdy.Internal.Discord
+        Howdy.Internal.Reaction
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
           base                 ^>= 4.16.0.0
         , data-default         ^>= 0.7.1.1
-        , discord-haskell      ^>= 1.12.5
+        , discord-haskell      ^>= 1.13.0
         , mtl
+        , transformers
         , text
         , unordered-containers ^>= 0.2.17.0
         , exceptions
@@ -56,6 +61,7 @@ library
         , free                 ^>= 5.1.7
         , bytestring
         , aeson
+        , optics ^>= 0.4.2
     hs-source-dirs:     src
     ghc-options:        -fllvm
     default-language:   Haskell2010

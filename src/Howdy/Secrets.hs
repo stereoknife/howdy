@@ -10,7 +10,7 @@ defaultTokenEnv :: String
 defaultTokenEnv = ""
 
 defaultTokenPath :: String
-defaultTokenPath = ""
+defaultTokenPath = "./token.nightly.secret"
 
 fromList :: [String] -> IO Text
 fromList = foldl' (\acc x -> acc <|> fromAny x) empty

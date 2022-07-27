@@ -4,7 +4,9 @@
 module Howdy.Internal.Bot.Debug where
 
 import Discord.Types
+    ( ChannelId, DiscordId(DiscordId), Snowflake(Snowflake) )
 import Control.Monad.Free (Free (Free), liftF)
+import Data.Coerce (coerce)
 
 data DebugOptions = DebugOptions
     { pipeLogs         :: Bool
@@ -19,7 +21,7 @@ data DBCMD a = PipeLogs Snowflake a
 type DebugBuilder = Free DBCMD
 
 build :: DebugBuilder a -> DebugOptions -> DebugOptions
-build (Free (PipeLogs         x next)) o = build next $ o { pipeLogs = True, pipeLogsTarget = x }
+build (Free (PipeLogs         x next)) o = build next $ o { pipeLogs = True, pipeLogsTarget = coerce x }
 build (Free (DisableDebugging   next)) o = build next $ o { enableDebugFlags = False }
 
 pipeLogsTo :: Snowflake -> DebugBuilder ()

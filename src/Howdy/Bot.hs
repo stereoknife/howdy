@@ -5,7 +5,9 @@ module Howdy.Bot ( B.prefixes
                  , B.repo
                  , B.note
                  , B.name
+                 , B.reaction
                  , L.start
+                 , bot
                  ) where
 
 import qualified Howdy.Internal.Bot.Builder as B
