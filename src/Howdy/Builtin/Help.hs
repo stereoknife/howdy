@@ -1,12 +1,12 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns           #-}
 
 module Howdy.Builtin.Help where
 
-import Howdy.Internal.Bot.Builder (BotPreferences (commandsData))
-import Howdy.Internal.Command
-import Data.Text (Text)
-import Data.Maybe (fromMaybe)
+import           Data.Maybe                 (fromMaybe)
+import           Data.Text                  (Text)
+import           Howdy.Internal.Bot.Builder (BotPreferences (commandsData))
+import           Howdy.Internal.Command
 
 help :: BotPreferences -> Command
 help b i = do let text = fmap formatCommand b.commandsData

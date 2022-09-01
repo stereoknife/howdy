@@ -4,12 +4,12 @@ module Howdy.Internal.Parser.Cons where
 
 import           Control.Applicative         (Alternative (empty, many, some, (<|>)))
 import           Control.Monad               (guard)
+import           Data.Bifunctor              (first)
 import           Data.Char                   (isSpace)
+import           Data.Maybe                  (fromMaybe, isJust)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Howdy.Internal.Parser.Types (Parser (..))
-import Data.Maybe (isJust, fromMaybe)
-import Data.Bifunctor (first)
 
 char :: Char -> Parser Char
 char c = anyChar `when` (c ==)

@@ -1,26 +1,26 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE QuantifiedConstraints  #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 module Control.Optics where
 
-import Control.Monad.Reader (MonadReader (..), asks)
-import Optics (Lens, Getter, to, view, castOptic, (%))
+import           Control.Monad.Reader (MonadReader (..), asks)
+import           Data.Kind            (Constraint, Type)
+import           Data.Proxy           (Proxy)
+import           Data.Tuple.Optics    (Field1 (_1), Field2 (_2))
+import           GHC.Records          (HasField (getField))
+import           Optics               (Getter, Lens, castOptic, to, view, (%))
 import qualified Optics
-import GHC.Records (HasField (getField))
-import Data.Kind ( Type, Constraint )
-import Data.Tuple.Optics ( Field1(_1), Field2(_2) )
-import Data.Proxy (Proxy)
 
 
 -- Even though this is called Lens in reality it only uses Getters

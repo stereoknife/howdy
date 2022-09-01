@@ -1,23 +1,23 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE DeriveFunctor            #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE NoFieldSelectors         #-}
 
 module Howdy.Internal.Bot.Builder where
 
-import Control.Monad.Reader (Reader)
-import Data.HashMap.Internal.Strict (HashMap, insert, empty)
-import Howdy.Internal.Command (CommandData, CommandPreferences (ident), CommandMeta (alias), CommandDefinition, mkCommand)
-import Data.Text (Text)
-import Control.Monad.Free ( Free(Free), liftF )
-import Discord.Types ( ChannelId, UserId )
-import Howdy.Internal.Bot.Debug (DebugOptions (..))
-import Howdy.Internal.Reaction
-    ( mkReaction,
-      EmojiIdentifier,
-      ReactionData,
-      ReactionDefinition,
-      ReactionMeta,
-      ReactionPreferences(ident) )
+import           Control.Monad.Free           (Free (Free), liftF)
+import           Control.Monad.Reader         (Reader)
+import           Data.HashMap.Internal.Strict (HashMap, empty, insert)
+import           Data.Text                    (Text)
+import           Discord.Types                (ChannelId, UserId)
+import           Howdy.Internal.Bot.Debug     (DebugOptions (..))
+import           Howdy.Internal.Command       (CommandData, CommandDefinition,
+                                               CommandMeta (alias),
+                                               CommandPreferences (ident),
+                                               mkCommand)
+import           Howdy.Internal.Reaction      (EmojiIdentifier, ReactionData,
+                                               ReactionDefinition, ReactionMeta,
+                                               ReactionPreferences (ident),
+                                               mkReaction)
 
 data BotMeta = BotMeta
     { author :: Maybe UserId
@@ -26,7 +26,7 @@ data BotMeta = BotMeta
     , name   :: Maybe Text
     }
 
-data BotPreferences = BotPreferences 
+data BotPreferences = BotPreferences
     { prefixes      :: [Text]
     , commandsData  :: [CommandMeta]
     , commands      :: HashMap Text CommandPreferences

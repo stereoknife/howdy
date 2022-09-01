@@ -1,20 +1,20 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Howdy.Internal.Error where
 
-import           Data.Semigroup (Semigroup)
-import           Discord        (RestCallErrorCode)
-import           Data.Text (Text)
-import Data.Typeable (Typeable, cast)
-import Control.Monad.Except (MonadError (throwError), ExceptT (ExceptT), runExceptT)
+import           Control.Exception   (Exception)
+import           Control.Monad.Catch (Exception, MonadThrow (..))
+import           Data.Semigroup      (Semigroup)
+import           Data.Text           (Text)
+import           Data.Typeable       (Typeable, cast)
+import           Discord             (RestCallErrorCode)
 
 -- TODO: Combine multiple errors
 
@@ -44,7 +44,9 @@ data HowdyException where
     UnknownError      :: HowdyException
     HTTPError         :: ResponseCode -> Text -> HowdyException
 
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Show)
+
+instance Exception HowdyException where
 
 class KnownError e where
     absorb :: e -> HowdyException
@@ -58,15 +60,15 @@ instance KnownError HowdyException where
 instance KnownError DebugException where
     absorb = snd
 
-contain :: (MonadError HowdyException m, KnownError e) => Either e a -> m a
+contain :: (MonadThrow m, KnownError e) => Either e a -> m a
 contain (Right a) = pure a
-contain (Left e)  = throwError . absorb $ e
+contain (Left e)  = throwM . absorb $ e
 
-catch :: (MonadError HowdyException m, KnownError e) => m (Either e a) -> m a
+catch :: (MonadThrow m, KnownError e) => m (Either e a) -> m a
 catch e = e >>= contain
 
-report :: (MonadError HowdyException m) => HowdyException -> Maybe a -> m a
-report e Nothing  = throwError e
+report :: MonadThrow m => HowdyException -> Maybe a -> m a
+report e Nothing  = throwM e
 report _ (Just v) = pure v
 
 ignore :: HowdyException -> DebugException

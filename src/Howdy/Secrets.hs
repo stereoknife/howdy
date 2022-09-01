@@ -1,13 +1,13 @@
 module Howdy.Secrets where
-import Data.Text (Text, pack)
-import Data.Text.Encoding (decodeUtf8)
-import qualified Data.ByteString as BS
-import System.Environment (getEnv)
-import Control.Applicative ((<|>), Alternative (empty))
-import Data.List (foldl')
+import           Control.Applicative (Alternative (empty), (<|>))
+import qualified Data.ByteString     as BS
+import           Data.List           (foldl')
+import           Data.Text           (Text, pack)
+import           Data.Text.Encoding  (decodeUtf8)
+import           System.Environment  (getEnv)
 
 defaultTokenEnv :: String
-defaultTokenEnv = ""
+defaultTokenEnv = "DISCORD_TOKEN"
 
 defaultTokenPath :: String
 defaultTokenPath = "./token.nightly.secret"

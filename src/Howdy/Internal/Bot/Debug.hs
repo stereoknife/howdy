@@ -1,12 +1,12 @@
+{-# LANGUAGE DeriveFunctor    #-}
 {-# LANGUAGE NoFieldSelectors #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module Howdy.Internal.Bot.Debug where
 
-import Discord.Types
-    ( ChannelId, DiscordId(DiscordId), Snowflake(Snowflake) )
-import Control.Monad.Free (Free (Free), liftF)
-import Data.Coerce (coerce)
+import           Control.Monad.Free (Free (Free), liftF)
+import           Data.Coerce        (coerce)
+import           Discord.Types      (ChannelId, DiscordId (DiscordId),
+                                     Snowflake (Snowflake))
 
 data DebugOptions = DebugOptions
     { pipeLogs         :: Bool

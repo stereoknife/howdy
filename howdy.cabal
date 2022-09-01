@@ -41,6 +41,7 @@ library
         Howdy.Internal.Command
         Howdy.Internal.Bot.Builder
         Howdy.Internal.Bot.CommandManager
+        Howdy.Internal.Bot.ReactionManager
         Howdy.Internal.Bot.Lifecycle
         Howdy.Internal.Bot.Debug
         Howdy.Internal.Discord
@@ -55,6 +56,7 @@ library
         , mtl
         , transformers
         , text
+        , http-client ^>= 0.7.11
         , unordered-containers ^>= 0.2.17.0
         , exceptions
         , hashable

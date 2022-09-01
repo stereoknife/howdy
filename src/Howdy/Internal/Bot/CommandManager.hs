@@ -1,44 +1,38 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE PatternSynonyms            #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Howdy.Internal.Bot.CommandManager where
-import Discord ( DiscordHandler )
-import Discord.Types
-    ( Message(messageContent, messageReference, messageChannelId,
-              messageGuildId, messageAuthor) )
-import Howdy.Internal.Bot.Builder
-    ( BotPreferences(prefixes, commands, aliases) )
-import Howdy.Error
-    ( MonadError(..),
-      HowdyException(ForbiddenCommand, Ignore, UnknownIdentifier,
-                     DiscordError, CommandNotFound),
-      report )
-import Control.Monad.Trans.Except ( ExceptT, runExceptT )
-import Data.Text (Text)
-import Howdy.Internal.Parser.Class ( parse, parseWithError )
-import Howdy.Internal.Parser.Cons
-    ( firstof, flag, string, word )
-import Howdy.Internal.Command
-    ( CommandInput(..),
-      CommandPreferences(..) )
-import Data.HashMap.Lazy ((!?))
-import Control.Monad (unless)
-import Control.Monad.Reader (runReaderT, ReaderT, MonadTrans (lift))
+import           Control.Monad               (unless)
+import           Control.Monad.Catch         (MonadThrow (throwM), catchAll)
+import           Control.Monad.Reader        (MonadTrans (lift), ReaderT,
+                                              runReaderT)
+import           Control.Monad.Trans.Except  (ExceptT, runExceptT)
+import           Data.HashMap.Lazy           ((!?))
+import           Data.Text                   (Text)
+import           Discord                     (DiscordHandler)
+import           Discord.Types               (Message (messageAuthor, messageChannelId, messageContent, messageGuildId, messageReference))
+import           Howdy.Error                 (HowdyException (CommandNotFound, DiscordError, ForbiddenCommand, Ignore, UnknownIdentifier),
+                                              MonadError (..), report)
+import           Howdy.Internal.Bot.Builder  (BotPreferences (aliases, commands, prefixes))
+import           Howdy.Internal.Command      (CommandInput (..),
+                                              CommandPreferences (..))
+import           Howdy.Internal.Parser.Class (parse, parseWithError)
+import           Howdy.Internal.Parser.Cons  (firstof, flag, string, word)
 
 {-
 Steps to manage commands:
@@ -72,7 +66,7 @@ dealWithCommand m b = do -- Match and discard prefix
                          -- Match and set Debug flag
                          (debug, rest') <- parse (flag "#debug") rest
                          -- Get command input
-                         let err = runExceptT $ do
+                         let cmd = do
                                    ci <- buildInput m rest'
                                    -- Get command
                                    cr <- fetchCommand b ci.target
@@ -83,18 +77,20 @@ dealWithCommand m b = do -- Match and discard prefix
                                    -- Handle errors
                                    -- Use cont here ????
                                    -- catchE handleError debug
+                         --runExceptT $ cmd `catchAll` const pure ()
+                         --pure ()
                          lift $ do
-                                e <- err
+                                e <- runExceptT cmd
                                 case e of Left e' -> errorHandler debug e'
                                           Right _ -> pure ()
 
-fetchCommand :: MonadError HowdyException m => BotPreferences -> Text -> m CommandPreferences
+fetchCommand :: MonadThrow m => BotPreferences -> Text -> m CommandPreferences
 fetchCommand b a = do let aliases = b.aliases
                           coms = b.commands
                       id <- report UnknownIdentifier $ aliases !? a
                       report CommandNotFound $ coms !? id
 
-buildInput :: (MonadError HowdyException m) => Message -> Text -> m CommandInput
+buildInput :: MonadThrow m => Message -> Text -> m CommandInput
 buildInput m t = do (target, args) <- parse word t
                     let user = m.messageAuthor
                         guild = m.messageGuildId
@@ -102,15 +98,15 @@ buildInput m t = do (target, args) <- parse word t
                         ref = m.messageReference
                     pure $ CommandInput target user guild channel args ref
 
-permit :: MonadError HowdyException m => CommandPreferences -> CommandInput -> m ()
-permit p i = unless (p.permission i) $ throwError ForbiddenCommand
+permit :: MonadThrow m => CommandPreferences -> CommandInput -> m ()
+permit p i = unless (p.permission i) $ throwM ForbiddenCommand
 
 errorHandler :: Bool -> HowdyException -> DiscordHandler ()
 errorHandler debug = \case -- it has cleaner syntax for many alternatives ok
     DiscordError code -> doNothing
-    CommandNotFound -> doNothing
-    ForbiddenCommand -> doNothing
-    _ -> doNothing
+    CommandNotFound   -> doNothing
+    ForbiddenCommand  -> doNothing
+    _                 -> doNothing
 
 doNothing :: DiscordHandler ()
 doNothing = pure ()

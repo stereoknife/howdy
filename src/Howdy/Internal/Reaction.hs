@@ -1,33 +1,41 @@
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NoFieldSelectors #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoFieldSelectors      #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Howdy.Internal.Reaction where
 
-import Discord ( def, DiscordHandler )
-import Data.Text ( Text )
-import Data.Hashable ( Hashable(..) )
-import Control.Monad.Free ( Free(Free), liftF )
-import Data.Default ( Default(..) )
-import Howdy.Error (HowdyException, MonadError)
-import Control.Monad.Except (ExceptT, runExceptT, MonadIO)
-import Discord.Types
-    ( DiscordId(DiscordId), EmojiId, Snowflake(Snowflake) )
-import Howdy.Internal.Discord (MonadDiscord, request)
-import Control.Monad.Reader (MonadReader, asks, ReaderT)
-import qualified Discord.Requests as R
-import Data.Kind (Type, Constraint)
-import GHC.Records (HasField)
-import Howdy.Internal.Command (CommandInput)
-import Control.Monad.Catch (MonadThrow)
+import           Control.Monad.Except   (ExceptT, MonadIO, MonadTrans (lift),
+                                         runExceptT)
+import           Control.Monad.Free     (Free (Free), liftF)
+import           Data.Default           (Default (..))
+import           Data.Hashable          (Hashable (..))
+import           Data.Text              (Text)
+import           Discord                (DiscordHandler, def)
+import           Discord.Types          (ChannelId, DiscordId (DiscordId),
+                                         EmojiId, GuildId, MessageReference,
+                                         Snowflake (Snowflake), User)
+import           Howdy.Error            (HowdyException, MonadError)
+
+import           Control.Monad.Catch    (Exception, MonadThrow)
+import           Control.Monad.Reader   (MonadReader (ask),
+                                         ReaderT (runReaderT), asks)
+import           Control.Optics
+import           Data.Kind              (Constraint, Type)
+import qualified Discord.Requests       as R
+import           GHC.Records            (HasField)
+import           Howdy.Internal.Command (CommandInput (CommandInput))
+import           Howdy.Internal.Discord (MonadDiscord (liftDiscord), request)
+import           Optics
 
 data EmojiIdentifier = Unicode Text
                      | Custom EmojiId
@@ -41,20 +49,27 @@ instance Hashable EmojiId where
 
 instance Hashable EmojiIdentifier where
     hashWithSalt i (Unicode t) = hashWithSalt i t
-    hashWithSalt i (Custom e) = hashWithSalt i e
+    hashWithSalt i (Custom e)  = hashWithSalt i e
 
-data ReactionMeta = ReactionMeta { alias      :: [EmojiIdentifier]
-                                 , desc       :: Maybe Text
-                                 , hidden     :: Bool
+data ReactionMeta = ReactionMeta { alias  :: [EmojiIdentifier]
+                                 , desc   :: Maybe Text
+                                 , hidden :: Bool
                                  }
 
 data ReactionPreferences = ReactionPreferences { ident      :: EmojiIdentifier
                                                , permission :: ReactionInput -> Bool
-                                               , runner     :: Reaction
+                                               , runner     :: ReactionInput -> ExceptT HowdyException DiscordHandler ()
                                                , debug      :: Bool -- TODO: change to debug flags and later to customizable flags
                                                }
 
-type ReactionInput = CommandInput
+data ReactionInput = ReactionInput { target  :: EmojiIdentifier
+                                   , reacter :: User
+                                   , author  :: User
+                                   , guild   :: Maybe GuildId
+                                   , channel :: ChannelId
+                                   , args    :: Text
+                                   , ref     :: Maybe MessageReference
+                                   }
 
 data RBCMD a = Alias [EmojiIdentifier] a
              | Desc Text a
@@ -68,9 +83,19 @@ type ReactionData = (ReactionMeta, ReactionPreferences)
 
 type ReactionDefinition = Free RBCMD
 
-type Reaction = forall m. ReaderT CommandInput (ExceptT HowdyException DiscordHandler) ()
+type ReactionWrapper e = ReaderT ReactionInput (ExceptT e DiscordHandler)
+type Reaction = forall e. Exception e => ReactionWrapper e ()
 
-type ReactionReqs m = (MonadDiscord m, MonadReader CommandInput m, MonadError HowdyException m, MonadIO m, MonadThrow m)
+instance WithLens ReactionInput ChannelId where
+  focus = to (.channel)
+
+instance (Monad m) => MonadLens ChannelId (ReaderT ReactionInput m) where
+  get = view focus <$> ask
+
+instance MonadDiscord (ReactionWrapper e) where
+  liftDiscord = lift . lift
+
+type ReactionReqs m = (MonadDiscord m, MonadReader ReactionInput m, MonadError HowdyException m, MonadIO m, MonadThrow m)
 
 type ReactionWith a = forall m. (ReactionWithReqs a m) => m ()
 
@@ -84,7 +109,7 @@ build' (Free (Desc       x next)) (m,r) = build' next (m { desc = Just x }, r)
 build' (Free (Hide         next)) (m,r) = build' next (m { hidden = True }, r)
 build' (Free (Ident      x next)) (m,r) = build' next (m, r { ident = x })
 build' (Free (Permission x next)) (m,r) = build' next (m, r { permission = x })
-build' (Free (Runner     x next)) (m,r) = build' next (m, r { runner = x })
+build' (Free (Runner     x next)) (m,r) = build' next (m, r { runner = (\ci -> runReaderT x ci) })
 build' _ x = x
 
 mkReaction :: EmojiIdentifier -> ReactionDefinition () -> ReactionData

@@ -2,14 +2,15 @@
 
 module Howdy.Internal.Parser.ConsR where
 
-import           Control.Applicative         (Alternative (empty, many, some, (<|>)))
-import           Control.Monad               (guard)
-import           Data.Char                   (isSpace)
-import           Data.Text                   (Text)
-import qualified Data.Text                   as T
-import           Howdy.Internal.Parser.TransR (ParserT (..), Result (..), parser, runParserT, remainder)
-import Control.Monad.Identity (Identity (runIdentity))
-import Control.Monad.Reader (ask)
+import           Control.Applicative          (Alternative (empty, many, some, (<|>)))
+import           Control.Monad                (guard)
+import           Control.Monad.Identity       (Identity (runIdentity))
+import           Control.Monad.Reader         (ask)
+import           Data.Char                    (isSpace)
+import           Data.Text                    (Text)
+import qualified Data.Text                    as T
+import           Howdy.Internal.Parser.TransR (ParserT (..), Result (..),
+                                               parser, remainder, runParserT)
 
 type Parser = ParserT Identity
 
@@ -57,7 +58,7 @@ firstof f = foldr ((<|>) . f) empty
 
 when :: Parser a -> (a -> Bool) -> Parser a
 when p c = parser $ \s ->
-    case runParser p s of Fail t -> Fail t
+    case runParser p s of Fail t      -> Fail t
                           Success a t -> if c a then Success a t else Fail t
 
 unless :: Parser a -> (a -> Bool) -> Parser a

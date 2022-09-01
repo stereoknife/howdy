@@ -3,4 +3,4 @@ module Howdy.Discord ( MonadDiscord
                      , send
                      ) where
 
-import Howdy.Internal.Discord
+import           Howdy.Internal.Discord

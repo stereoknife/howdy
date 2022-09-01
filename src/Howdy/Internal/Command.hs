@@ -1,41 +1,43 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NoFieldSelectors #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE NoFieldSelectors      #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Howdy.Internal.Command where
 
-import Discord ( def, DiscordHandler )
-import Data.Text ( Text )
-import Data.Hashable ( Hashable(hash) )
-import Control.Monad.Free ( Free(Free), liftF, _Free )
-import Data.Default ( Default(..) )
-import Howdy.Error (HowdyException, MonadError)
-import Control.Monad.Except (ExceptT, runExceptT, MonadIO, MonadTrans (lift))
-import Discord.Types ( ChannelId, GuildId, UserId, MessageReference, User )
-import Howdy.Internal.Discord (MonadDiscord (liftDiscord), request)
-import Control.Monad.Reader (MonadReader, ask, ReaderT (runReaderT))
-import qualified Discord.Requests as R
-import Data.Kind (Type, Constraint)
-import GHC.Records (HasField)
-import Control.Monad.Catch (MonadThrow)
-import Control.Optics (MonadLens (get), WithLens (..))
-import Optics (to, view)
+import           Control.Monad.Catch    (Exception, MonadThrow)
+import           Control.Monad.Except   (ExceptT, MonadIO, MonadTrans (lift),
+                                         runExceptT)
+import           Control.Monad.Free     (Free (Free), _Free, liftF)
+import           Control.Monad.Reader   (MonadReader, ReaderT (runReaderT), ask)
+import           Control.Optics         (MonadLens (get), WithLens (..))
+import           Data.Default           (Default (..))
+import           Data.Hashable          (Hashable (hash))
+import           Data.Kind              (Constraint, Type)
+import           Data.Text              (Text)
+import           Discord                (DiscordHandler, def)
+import qualified Discord.Requests       as R
+import           Discord.Types          (ChannelId, GuildId, MessageReference,
+                                         User, UserId)
+import           GHC.Records            (HasField)
+import           Howdy.Error            (HowdyException, MonadError)
+import           Howdy.Internal.Discord (MonadDiscord (liftDiscord), request)
+import           Optics                 (to, view)
 
-data CommandMeta = CommandMeta { alias      :: [Text]
-                               , desc       :: Maybe Text
-                               , hidden     :: Bool
+data CommandMeta = CommandMeta { alias  :: [Text]
+                               , desc   :: Maybe Text
+                               , hidden :: Bool
                                }
 
 data CommandPreferences = CommandPreferences { ident      :: Text
@@ -45,7 +47,7 @@ data CommandPreferences = CommandPreferences { ident      :: Text
                                              }
 
 data CommandInput = CommandInput { target  :: Text
-                                 , user    :: User
+                                 , author  :: User
                                  , guild   :: Maybe GuildId
                                  , channel :: ChannelId
                                  , args    :: Text
@@ -64,18 +66,19 @@ type CommandData = (CommandMeta, CommandPreferences)
 
 type CommandDefinition = Free CBCMD
 
-type Command = forall m. ReaderT CommandInput (ExceptT HowdyException DiscordHandler) ()
+type CommandWrapper e = ReaderT CommandInput (ExceptT e DiscordHandler)
+type Command = forall e. Exception e => CommandWrapper e ()
 
 instance WithLens CommandInput ChannelId where
   focus = to (.channel)
 
-instance (MonadReader CommandInput m, Monad m) => MonadLens ChannelId m where
+instance Monad m => MonadLens ChannelId (ReaderT CommandInput m) where
   get = view focus <$> ask
 
-instance MonadDiscord (ReaderT CommandInput (ExceptT HowdyException DiscordHandler)) where
+instance MonadDiscord (CommandWrapper e) where
   liftDiscord = lift . lift
 
-type CommandReqs m = (MonadDiscord m, MonadError HowdyException m, MonadIO m, MonadThrow m)
+type CommandReqs m = (MonadDiscord m, MonadIO m, MonadThrow m)
 
 type CommandWith a = forall m. (CommandWithReqs a m) => m ()
 

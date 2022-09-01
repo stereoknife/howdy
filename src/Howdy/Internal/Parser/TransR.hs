@@ -3,12 +3,13 @@ module Howdy.Internal.Parser.TransR
        --{-# WARNING "Unused, this is here in case it's needed in the future again." #-}
        (ParserT (..), parser, Result (..), runParserT, remainder) where
 
-import           Control.Applicative (Alternative (..))
-import           Control.Monad.Trans (MonadTrans (..))
-import           Data.Default        (Default (def))
-import           Data.Text           (Text)
-import           GHC.Base            (Applicative)
-import Control.Monad.Reader (ReaderT (runReaderT), MonadReader (ask, reader))
+import           Control.Applicative  (Alternative (..))
+import           Control.Monad.Reader (MonadReader (ask, reader),
+                                       ReaderT (runReaderT))
+import           Control.Monad.Trans  (MonadTrans (..))
+import           Data.Default         (Default (def))
+import           Data.Text            (Text)
+import           GHC.Base             (Applicative)
 
 data Result a = Success a Text
               | Fail Text
@@ -20,24 +21,24 @@ remainder (Fail t)      = t
 
 instance Functor Result where
     fmap f (Success a t) = Success (f a) t
-    fmap f (Fail t) = Fail t
+    fmap f (Fail t)      = Fail t
 
 instance Applicative Result where
     pure a = Success a ""
     (Success f _) <*> (Success a t) = Success (f a) t
-    (Fail t) <*> _ = Fail t
-    _ <*> (Fail t) = Fail t
+    (Fail t) <*> _                  = Fail t
+    _ <*> (Fail t)                  = Fail t
 
 instance Monad Result where
     return = pure
     (Success a t) >>= m = m a
-    (Fail t) >>= m = Fail t
+    (Fail t) >>= m      = Fail t
 
 instance Alternative Result where
     empty = Fail ""
     (Success a t) <|> _ = Success a t
     _ <|> (Success a t) = Success a t
-    a <|> _ = a
+    a <|> _             = a
 
 newtype ParserT m a = ParserT { ruParserT :: ReaderT Text m (Result a) }
 
@@ -68,7 +69,7 @@ instance Monad m => Alternative (ParserT m) where
         s <- ask
         let a = runParserT ma s
             b = runParserT mb s
-        lift $ (<|>) <$> a <*> b 
+        lift $ (<|>) <$> a <*> b
 
 instance (Semigroup a, Monad m) => Semigroup (ParserT m a) where
     p1 <> p2 = do

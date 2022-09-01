@@ -18,24 +18,24 @@ rest (Fail t)      = t
 
 instance Functor Result where
     fmap f (Success a t) = Success (f a) t
-    fmap f (Fail t) = Fail t
+    fmap f (Fail t)      = Fail t
 
 instance Applicative Result where
     pure a = Success a ""
     (Success f _) <*> (Success a t) = Success (f a) t
-    (Fail t) <*> _ = Fail t
-    _ <*> (Fail t) = Fail t
+    (Fail t) <*> _                  = Fail t
+    _ <*> (Fail t)                  = Fail t
 
 instance Monad Result where
     return = pure
     (Success a t) >>= m = m a
-    (Fail t) >>= m = Fail t
+    (Fail t) >>= m      = Fail t
 
 instance Alternative Result where
     empty = Fail ""
     (Success a t) <|> _ = Success a t
     _ <|> (Success a t) = Success a t
-    a <|> _ = a
+    a <|> _             = a
 
 newtype ParserT m a = ParserT { runParserT :: Monad m => Text -> m (Result a) }
 
@@ -43,7 +43,7 @@ instance Functor m => Functor (ParserT m) where
     fmap f mp = ParserT $ \s -> do
         r <- runParserT mp s
         case r of Success a t -> pure $ Success (f a) t
-                  Fail t -> pure $ Fail t
+                  Fail t      -> pure $ Fail t
 
 instance Applicative m => Applicative (ParserT m) where
     pure a = ParserT $ \s -> pure $ Success a s
@@ -59,7 +59,7 @@ instance Monad m => Monad (ParserT m) where
     m >>= f = ParserT $ \s -> do
         m' <- runParserT m s
         case m' of Success a t -> runParserT (f a) t
-                   Fail t        -> pure $ Fail t
+                   Fail t      -> pure $ Fail t
 
 instance Monad m => Alternative (ParserT m) where
     empty = ParserT $ pure . Fail

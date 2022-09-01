@@ -11,4 +11,4 @@ module Howdy.Command ( Command
                      , run
                      ) where
 
-import Howdy.Internal.Command
+import           Howdy.Internal.Command
