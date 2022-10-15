@@ -9,19 +9,18 @@
 
 module Howdy.Internal.Error where
 
-import           Control.Exception   (Exception)
-import           Control.Monad.Catch (Exception, MonadThrow (..))
-import           Data.Semigroup      (Semigroup)
-import           Data.Text           (Text)
-import           Data.Typeable       (Typeable, cast)
-import           Discord             (RestCallErrorCode)
+import Control.Exception (Exception)
+import Control.Monad.Catch (Exception, MonadThrow (..))
+import Data.Semigroup (Semigroup)
+import Data.Text (Text)
+import Data.Typeable (Typeable, cast)
+import Discord (DiscordHandler, RestCallErrorCode)
 
 -- TODO: Combine multiple errors
 
 type Alias = Text
 type Identifier = Text
 type ResponseCode = Int
-
 type DebugException = (Bool, HowdyException)
 
 data HowdyException where
@@ -87,3 +86,13 @@ pair = curry id
 
 -- pattern Opt1 :: String -> TestErr
 -- pattern Opt1 a <- ((\(TestErr e) -> cast e) -> Just a)
+
+errorHandler :: HowdyException -> DiscordHandler ()
+errorHandler = \case -- it has cleaner syntax for many alternatives ok
+    DiscordError code -> doNothing
+    CommandNotFound   -> doNothing
+    ForbiddenCommand  -> doNothing
+    _                 -> doNothing
+
+doNothing :: DiscordHandler ()
+doNothing = pure ()

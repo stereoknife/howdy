@@ -21,12 +21,12 @@ category:           Web
 
 library
     exposed-modules:
-        Howdy.Parser
+        --Howdy.Parser
         Howdy.Error
         Howdy.Secrets
-        Howdy.Bot
-        Howdy.Command
-        Howdy.Discord
+        --Howdy.Bot
+        --Howdy.Command
+        --Howdy.Discord
         Control.Optics
 
     -- Modules included in this library but not exported.
@@ -38,14 +38,14 @@ library
         Howdy.Internal.Parser.Trans
         Howdy.Internal.Parser.TransR
         Howdy.Internal.Parser.Types
-        Howdy.Internal.Command
-        Howdy.Internal.Bot.Builder
+        Howdy.Comptime.Command
+        Howdy.Comptime.Bot
         Howdy.Internal.Bot.CommandManager
         Howdy.Internal.Bot.ReactionManager
         Howdy.Internal.Bot.Lifecycle
-        Howdy.Internal.Bot.Debug
+        Howdy.Internal.Debug
         Howdy.Internal.Discord
-        Howdy.Internal.Reaction
+        Howdy.Comptime.Reaction
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -67,7 +67,7 @@ library
     hs-source-dirs:     src
     ghc-options:        -fllvm
     default-language:   Haskell2010
-    default-extensions: OverloadedStrings, OverloadedRecordDot
+    default-extensions: OverloadedStrings, OverloadedRecordDot, DuplicateRecordFields, LambdaCase
 
 test-suite howdy-spec
     default-language:   Haskell2010
@@ -80,9 +80,10 @@ test-suite howdy-spec
         , hspec             ^>= 2.8.3
         , howdy
         , quickcheck-text   ^>= 0.1.2.1
-        , discord-haskell      ^>= 1.12.5
+        , discord-haskell
         , text
     other-modules:
           Howdy.ParserSpec
+          Howdy.Examples.Api
     default-extensions: OverloadedStrings
     build-tool-depends: hspec-discover:hspec-discover == 2.*

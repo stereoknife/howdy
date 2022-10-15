@@ -12,30 +12,27 @@
 
 module Howdy.Internal.Discord where
 
-import           Control.Monad.Catch  (MonadThrow)
-import           Control.Monad.Except (MonadError)
-import           Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
-import           Control.Monad.Trans  (MonadTrans (..))
-import           Control.Optics       (MonadLens, MonadLenses, WithLens (focus),
-                                       get)
-import           Data.Kind            (Constraint, Type)
-import           Data.Text            (Text)
-import           Data.Typeable        (Typeable, typeOf)
-import           Discord              (DiscordHandler, FromJSON, Request, def,
-                                       restCall)
-import qualified Discord.Requests     as R
-import           Discord.Types        (Channel (channelId), ChannelId,
-                                       CreateEmbed, Message, MessageReference,
-                                       UserId)
-import           GHC.Records          (HasField)
-import           Howdy.Internal.Error (HowdyException, catch)
-import           Optics               (castOptic, to, view, (%))
+import Control.Monad.Catch (MonadThrow)
+import Control.Monad.Except (MonadError)
+import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
+import Control.Monad.Trans (MonadTrans (..))
+import Control.Optics (MonadLens, MonadLenses, WithLens (focus), get)
+import Data.Kind (Constraint, Type)
+import Data.Text (Text)
+import Data.Typeable (Typeable, typeOf)
+import Discord (DiscordHandler, FromJSON, Request, def, restCall)
+import qualified Discord.Requests as R
+import Discord.Types (Channel (channelId), ChannelId, CreateEmbed, Message, MessageReference,
+                      UserId)
+import GHC.Records (HasField)
+import Howdy.Internal.Error (HowdyException, catch)
+import Optics (castOptic, to, view, (%))
 
 class Monad m => MonadDiscord m where
     liftDiscord :: DiscordHandler a -> m a
 
--- instance (MonadTrans m, Monad (m DiscordHandler)) => MonadDiscord (m DiscordHandler) where
---     liftDiscord = lift
+instance MonadDiscord DiscordHandler where
+     liftDiscord = id
 
 data DiscordRequest a where
     DiscordRequest :: (FromJSON a, Request (r a), Typeable a) => r a -> DiscordRequest a
@@ -52,9 +49,6 @@ elimRequest f (DiscordRequest a) = f a
 -- This is here because of discord-haskell's calcified DiscordHandler (Either RestCallErrorCode a) return type
 elimRequestCalcified :: (forall r a. (FromJSON a, Request (r a)) => r a -> m (n a)) -> DiscordRequest a -> m (n a)
 elimRequestCalcified f (DiscordRequest a) = f a
-
--- request :: forall a. FromJSON a => DiscordRequest a -> DiscordHandler (Either RestCallErrorCode a)
--- request = elimRequestCalcified restCall
 
 request :: (Request (r a), FromJSON a, MonadThrow m, MonadDiscord m) => r a -> m a
 request = catch . liftDiscord . restCall

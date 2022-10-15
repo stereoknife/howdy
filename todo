@@ -1,0 +1,4 @@
+[ ] Replace optics with microlens
+[ ] Improve logging
+[ ] Simplify builders
+[ ] Simplify transformer stack
