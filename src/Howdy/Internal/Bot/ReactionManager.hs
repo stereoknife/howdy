@@ -5,16 +5,17 @@ module Howdy.Internal.Bot.ReactionManager where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
+import Control.Monad.Reader (runReader)
 import Data.HashMap.Lazy (empty, (!?))
 import Data.Text (Text)
 import Discord (DiscordHandler, restCall)
 import qualified Discord.Requests as R
-import Discord.Types (Message (..), ReactionInfo (..))
+import Discord.Types (Message (..), MessageReference (..), ReactionInfo (..))
 import Howdy.Comptime.Bot (BotDefinition (..))
 import Howdy.Comptime.Command (CommandDefinition (..), CommandInput (CommandInput, target))
 import Howdy.Comptime.Reaction (EmojiIdentifier, ReactionDefinition (..), ReactionInput (..),
-                                toIdentifier)
-import Howdy.Internal.Discord (request)
+                                ReactionReplyData (..), toIdentifier)
+import Howdy.Internal.Discord (request, unHowdy)
 import Howdy.Internal.Error (HowdyException (CommandNotFound, DiscordError, ForbiddenCommand, Ignore, UnknownIdentifier),
                              report)
 import Howdy.Internal.Parser.Class (parse, parseWithError)
@@ -50,8 +51,11 @@ reactionHandler r b = do
     -- Check permission
     permit rd ri
 
+    let rrd = ReactionReplyData r.reactionChannelId r.reactionUserId
+            $ MessageReference (Just r.reactionMessageId) Nothing Nothing True
+
     -- Run command
-    rd.rdRunner ri
+    runReader (unHowdy rd.rdRunner) rrd ri
 
 type HowdyDebug = ()
 

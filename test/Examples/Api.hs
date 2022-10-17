@@ -1,6 +1,6 @@
 -- Useless file, just to describe the howdy API
-module Api where
-
+module Examples.Api where
+{-
 main :: Bot
 main = bot
     $ token "bot_token.secret"
@@ -46,3 +46,4 @@ data Meta = Meta { name      :: Text
                  }
 
 type Commands = HashMap Text Command
+ -}

@@ -63,7 +63,7 @@ library
         , free                 ^>= 5.1.7
         , bytestring
         , aeson
-        , optics ^>= 0.4.2
+        , microlens ^>= 0.4.13.0
     hs-source-dirs:     src
     ghc-options:        -fllvm
     default-language:   Haskell2010
@@ -84,6 +84,6 @@ test-suite howdy-spec
         , text
     other-modules:
           Howdy.ParserSpec
-          Howdy.Examples.Api
+          Examples.Api
     default-extensions: OverloadedStrings
     build-tool-depends: hspec-discover:hspec-discover == 2.*

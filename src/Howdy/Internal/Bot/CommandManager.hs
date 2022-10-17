@@ -5,12 +5,15 @@ module Howdy.Internal.Bot.CommandManager where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
+import Control.Monad.Reader (runReader)
 import Data.HashMap.Lazy (empty, (!?))
 import Data.Text (Text)
 import Discord (DiscordHandler)
-import Discord.Types (Message (messageAuthor, messageChannelId, messageContent, messageGuildId, messageReference))
+import Discord.Types (Message (..), MessageReference (MessageReference), User (userId))
 import Howdy.Comptime.Bot (BotDefinition (..))
-import Howdy.Comptime.Command (CommandDefinition (..), CommandInput (CommandInput, target))
+import Howdy.Comptime.Command (CommandDefinition (..), CommandInput (CommandInput, target),
+                               CommandReplyData (..))
+import Howdy.Internal.Discord (request, unHowdy)
 import Howdy.Internal.Error (HowdyException (CommandNotFound, DiscordError, ForbiddenCommand, Ignore, UnknownIdentifier),
                              report)
 import Howdy.Internal.Parser.Class (parse, parseWithError)
@@ -55,8 +58,11 @@ commandHandler m b = do
     -- Check permission
     permit cr ci
 
+    let crd = CommandReplyData m.messageChannelId m.messageAuthor.userId
+            $ MessageReference (Just m.messageId) Nothing Nothing True
+
     -- Run command
-    cr.cdRunner ci
+    runReader (unHowdy cr.cdRunner) crd ci
 
 
 type HowdyDebug = ()

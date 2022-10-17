@@ -1,9 +1,13 @@
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 module Howdy.Comptime.Reaction
     ( Reaction
     , Permission
     , ReactionDefinition (..)
     , ReactionInput (..)
     , EmojiIdentifier (..)
+    , ReactionReplyData (..)
     , toIdentifier
     , alias
     , desc
@@ -15,13 +19,16 @@ module Howdy.Comptime.Reaction
     ) where
 
 import Control.Monad.Except (ExceptT)
+import Control.Optics (Lensed (..))
 import Data.Default (Default (..))
 import Data.Hashable (Hashable (..))
 import Data.Text (Text)
 import Discord (DiscordHandler)
 import Discord.Types (ChannelId, DiscordId (DiscordId), Emoji (..), EmojiId, GuildId,
-                      MessageReference, Snowflake (Snowflake), User)
+                      MessageReference, Snowflake (Snowflake), User, UserId)
+import Howdy.Internal.Discord (HowdyHandler)
 import Howdy.Internal.Error (HowdyException)
+import Lens.Micro (to)
 
 
 data EmojiIdentifier
@@ -39,8 +46,23 @@ instance Hashable EmojiIdentifier where
     hashWithSalt salt (Unicode a)                        = hashWithSalt salt a
     hashWithSalt salt (Custom (DiscordId (Snowflake a))) = hashWithSalt salt a
 
-type Reaction = ReactionInput -> DiscordHandler ()
+type Reaction = HowdyHandler ReactionReplyData ReactionInput ()
 type Permission = ReactionInput -> Bool
+
+data ReactionReplyData = ReactionReplyData
+    { rrdChannelId  :: ChannelId
+    , rrdWhisperId  :: UserId
+    , rrdMessageRef :: MessageReference
+    }
+
+instance Lensed ReactionReplyData ChannelId where
+    focus = to rrdChannelId
+
+instance Lensed ReactionReplyData MessageReference where
+    focus = to rrdMessageRef
+
+instance Lensed ReactionReplyData UserId where
+    focus = to rrdWhisperId
 
 data ReactionDefinition = ReactionDefinition
     { rdAlias      :: [EmojiIdentifier]
@@ -69,7 +91,7 @@ instance Default ReactionDefinition where
         , rdHidden = False
         , rdIdent = Unicode ""
         , rdPermission = const True
-        , rdRunner = const $ pure ()
+        , rdRunner = pure ()
         , rdDebug = False
         }
 

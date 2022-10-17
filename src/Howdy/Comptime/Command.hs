@@ -1,8 +1,13 @@
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 module Howdy.Comptime.Command
     ( Command
     , Permission
     , CommandDefinition (..)
     , CommandInput (..)
+    , CommandReplyData (..)
     , alias
     , desc
     , hide
@@ -13,15 +18,34 @@ module Howdy.Comptime.Command
     ) where
 
 import Control.Monad.Identity (Identity)
+import Control.Monad.Reader
 import Control.Monad.Trans.Except (ExceptT)
+import Control.Optics (Lensed (focus))
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Discord (DiscordHandler)
-import Discord.Types (ChannelId, GuildId, MessageReference, User)
+import Discord.Types (ChannelId, GuildId, MessageReference, User, UserId)
+import Howdy.Internal.Discord (HowdyHandler)
 import Howdy.Internal.Error (HowdyException)
+import Lens.Micro (to)
 
-type Command = CommandInput -> DiscordHandler ()
 type Permission = CommandInput -> Bool
+type Command = HowdyHandler CommandReplyData CommandInput ()
+
+data CommandReplyData = CommandReplyData
+    { crdChannelId  :: ChannelId
+    , crdWhisperId  :: UserId
+    , crdMessageRef :: MessageReference
+    }
+
+instance Lensed CommandReplyData ChannelId where
+    focus = to crdChannelId
+
+instance Lensed CommandReplyData MessageReference where
+    focus = to crdMessageRef
+
+instance Lensed CommandReplyData UserId where
+    focus = to crdWhisperId
 
 data CommandDefinition = CommandDefinition
     { cdAlias      :: [Text]
@@ -51,9 +75,10 @@ instance Default CommandDefinition where
         , cdHidden     = False
         , cdIdent      = ""
         , cdPermission = const True
-        , cdRunner     = const $ pure ()
+        , cdRunner     = pure ()
         , cdDebug      = False
         }
+
 
 (>>) :: (b -> c) -> (a -> b) -> a -> c
 (>>) = (.)
