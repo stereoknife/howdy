@@ -1,21 +1,25 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE TypeApplications #-}
 
 
 module Howdy.Internal.Bot.ReactionManager where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
-import Control.Monad.Reader (runReader)
+import Control.Monad.Reader (ReaderT (runReaderT), runReader)
+import Data.Coerce (coerce)
 import Data.HashMap.Lazy (empty, (!?))
+import Data.Monoid (Any (Any, getAny))
 import Data.Text (Text)
 import Discord (DiscordHandler, restCall)
 import qualified Discord.Requests as R
-import Discord.Types (Message (..), MessageReference (..), ReactionInfo (..))
+import Discord.Types (Channel (..), ChannelId, Emoji, Message (..), MessageId, MessageReaction (..),
+                      MessageReference (MessageReference), ReactionInfo (..), User (userId), UserId)
 import Howdy.Comptime.Bot (BotDefinition (..))
 import Howdy.Comptime.Command (CommandDefinition (..), CommandInput (CommandInput, target))
 import Howdy.Comptime.Reaction (EmojiIdentifier, ReactionDefinition (..), ReactionInput (..),
-                                ReactionReplyData (..), toIdentifier)
-import Howdy.Internal.Discord (request, unHowdy)
+                                ReactionReplyData (..), asText, toIdentifier)
+import Howdy.Internal.Discord (reactTo, request, unHowdy)
 import Howdy.Internal.Error (HowdyException (CommandNotFound, DiscordError, ForbiddenCommand, Ignore, UnknownIdentifier),
                              report)
 import Howdy.Internal.Parser.Class (parse, parseWithError)
@@ -43,25 +47,35 @@ Requisites:
 reactionHandler :: ReactionInfo -> BotDefinition -> DiscordHandler ()
 reactionHandler r b = do
     -- Build command input
-    ri <- buildInput r $ toIdentifier r.reactionEmoji
+    let emId = toIdentifier r.reactionEmoji
 
-    -- Get Command
-    rd <- fetchReaction b ri.target
+    -- Get Command. This prevents other requests from being made if the reaction isn't a command
+    com <- fetchReaction b emId
+    (user, msg) <- fetchData r
+
+    if hasReacted r.reactionEmoji msg.messageReactions
+      then throwM ForbiddenCommand
+      else reactTo r.reactionChannelId r.reactionMessageId $ asText r.reactionEmoji
+
+    let ri = buildInput r emId user msg
 
     -- Check permission
-    permit rd ri
+    permit com ri
 
     let rrd = ReactionReplyData r.reactionChannelId r.reactionUserId
             $ MessageReference (Just r.reactionMessageId) Nothing Nothing True
+    let runner = com.rdRunner ri
 
     -- Run command
-    runReader (unHowdy rd.rdRunner) rrd ri
+    runReaderT (unHowdy runner) rrd
 
 type HowdyDebug = ()
 
 debugHandler :: Bool -> HowdyDebug -> DiscordHandler ()
 debugHandler = undefined
 
+hasReacted :: Emoji -> [MessageReaction] -> Bool
+hasReacted e = getAny . mconcat . fmap (\mr -> coerce $ mr.messageReactionMeIncluded && mr.messageReactionEmoji == e)
 
 fetchReaction :: MonadThrow m => BotDefinition -> EmojiIdentifier -> m ReactionDefinition
 fetchReaction b id =
@@ -70,16 +84,28 @@ fetchReaction b id =
        -- id <- report UnknownIdentifier $ emoji !? a
        report CommandNotFound $ recs !? id
 
+fetchData :: ReactionInfo -> DiscordHandler (User, Message)
+fetchData ri = do
+    user <- request $ R.GetUser ri.reactionUserId
+    message <- request $ R.GetChannelMessage (ri.reactionChannelId, ri.reactionMessageId)
+    pure (user, message)
 
-buildInput :: ReactionInfo -> EmojiIdentifier -> DiscordHandler ReactionInput
-buildInput r e = do let userId = r.reactionUserId
-                        guildId = r.reactionGuildId
-                        channelId = r.reactionChannelId
-                        messageId = r.reactionMessageId
-                    user <- request $ R.GetUser userId
-                    message <- request $ R.GetChannelMessage (channelId, messageId)
-                    pure $ ReactionInput e user user guildId channelId message.messageContent message.messageReference
+buildInput :: ReactionInfo -> EmojiIdentifier -> User -> Message -> ReactionInput
+buildInput r e usr msg = do
+    let userId = r.reactionUserId
+        guildId = r.reactionGuildId
+        channelId = r.reactionChannelId
+        messageId = r.reactionMessageId
+    ReactionInput
+      { target  = e
+      , reacter = usr
+      , author  = msg.messageAuthor
+      , guild   = guildId
+      , channel = channelId
+      , args    = msg.messageContent
+      , ref     = msg.messageReference
+      }
 
 
 permit :: MonadThrow m => ReactionDefinition -> ReactionInput -> m ()
-permit p i = unless (False {- p.permission i -}) $ throwM ForbiddenCommand
+permit rd i = unless (rd.rdPermission i) $ throwM ForbiddenCommand

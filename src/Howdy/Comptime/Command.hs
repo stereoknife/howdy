@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE ExtendedDefaultRules  #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
+
 module Howdy.Comptime.Command
     ( Command
     , Permission
@@ -20,17 +22,24 @@ module Howdy.Comptime.Command
 import Control.Monad.Identity (Identity)
 import Control.Monad.Reader
 import Control.Monad.Trans.Except (ExceptT)
-import Control.Optics (Lensed (focus))
+import Control.Optics (Lensed (focus), WithLens (..))
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Discord (DiscordHandler)
 import Discord.Types (ChannelId, GuildId, MessageReference, User, UserId)
 import Howdy.Internal.Discord (HowdyHandler)
 import Howdy.Internal.Error (HowdyException)
+import Howdy.Internal.Logging
 import Lens.Micro (to)
 
 type Permission = CommandInput -> Bool
-type Command = HowdyHandler CommandReplyData CommandInput ()
+type Command = CommandInput -> HowdyHandler CommandReplyData ()
+
+instance Show Command where
+    show _ = "Command [CommandInput -> HowdyHandler CommandReplyData ()]"
+
+instance Show Permission where
+    show _ = "Permission [CommandInput -> Bool]"
 
 data CommandReplyData = CommandReplyData
     { crdChannelId  :: ChannelId
@@ -55,7 +64,7 @@ data CommandDefinition = CommandDefinition
     , cdPermission :: Permission
     , cdRunner     :: Command
     , cdDebug      :: Bool -- TODO: change to debug flags and later to customizable flags
-    }
+    } deriving (Show)
 
 
 data CommandInput = CommandInput
@@ -75,32 +84,38 @@ instance Default CommandDefinition where
         , cdHidden     = False
         , cdIdent      = ""
         , cdPermission = const True
-        , cdRunner     = pure ()
+        , cdRunner     = const $ pure ()
         , cdDebug      = False
         }
 
-
+infixl 1 >>
 (>>) :: (b -> c) -> (a -> b) -> a -> c
 (>>) = (.)
 
 alias :: [Text] -> CommandDefinition -> CommandDefinition
 alias value cd = cd{ cdAlias = cd.cdAlias ++ value }
+    << "Adding aliases: " <+ value
 
 
 desc :: Text -> CommandDefinition -> CommandDefinition
 desc value cd = cd{ cdDesc = Just value }
+    << "Setting desc: " <+ value
 
 
 hide :: CommandDefinition -> CommandDefinition
 hide cd = cd{ cdHidden = True }
+    << "Hide: True"
 
 
 legacy :: Text -> CommandDefinition -> CommandDefinition
 legacy value cd = cd{ cdIdent = value }
+    << "Legacy id: " <+ value
 
 
 permission :: Permission -> CommandDefinition -> CommandDefinition
 permission value cd = cd{ cdPermission = value }
+    << "Permission updated"
 
 run :: Command -> CommandDefinition -> CommandDefinition
 run x cd = cd{ cdRunner = x }
+    << "Set run action."

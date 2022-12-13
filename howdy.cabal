@@ -11,8 +11,8 @@ homepage:
 -- bug-reports:
 license:            BSD-2-Clause
 license-file:       LICENSE
-author:             kam
-maintainer:         hello@techniworm.dev
+author:             kam <hello@techniworm.dev>
+maintainer:         kam <hello@techniworm.dev>
 
 -- A copyright notice.
 -- copyright:
@@ -22,6 +22,7 @@ category:           Web
 library
     exposed-modules:
         --Howdy.Parser
+        Howdy
         Howdy.Error
         Howdy.Secrets
         --Howdy.Bot
@@ -45,25 +46,29 @@ library
         Howdy.Internal.Bot.Lifecycle
         Howdy.Internal.Debug
         Howdy.Internal.Discord
+        Howdy.Internal.Logging
+        Howdy.Internal.Logging.Fmt
         Howdy.Comptime.Reaction
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-          base                 ^>= 4.16.0.0
-        , data-default         ^>= 0.7.1.1
-        , discord-haskell      ^>= 1.13.0
-        , mtl
-        , transformers
-        , text
-        , http-client ^>= 0.7.11
-        , unordered-containers ^>= 0.2.17.0
+          base                   >= 4.16.0.0 && < 4.18
+        , discord-haskell       ^>= 1.13.0
+        , http-client           ^>= 0.7.11
+        , microlens             ^>= 0.4.13.0
+        , pretty                ^>= 1.1.3.6
+        , unordered-containers  ^>= 0.2.17.0
+
+        -- get version from other dependencies
+        , aeson
+        , bytestring
+        , data-default
         , exceptions
         , hashable
-        , free                 ^>= 5.1.7
-        , bytestring
-        , aeson
-        , microlens ^>= 0.4.13.0
+        , mtl
+        , text
+        , transformers
     hs-source-dirs:     src
     ghc-options:        -fllvm
     default-language:   Haskell2010
@@ -76,7 +81,7 @@ test-suite howdy-spec
     ghc-options:        -Wall
     main-is:            Spec.hs
     build-depends:    
-          base              ^>= 4.16.0.0
+          base              >= 4.16.0.0 && < 4.18
         , hspec             ^>= 2.8.3
         , howdy
         , quickcheck-text   ^>= 0.1.2.1

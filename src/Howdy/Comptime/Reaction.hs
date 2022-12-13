@@ -9,6 +9,7 @@ module Howdy.Comptime.Reaction
     , EmojiIdentifier (..)
     , ReactionReplyData (..)
     , toIdentifier
+    , asText
     , alias
     , desc
     , hide
@@ -22,7 +23,7 @@ import Control.Monad.Except (ExceptT)
 import Control.Optics (Lensed (..))
 import Data.Default (Default (..))
 import Data.Hashable (Hashable (..))
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Discord (DiscordHandler)
 import Discord.Types (ChannelId, DiscordId (DiscordId), Emoji (..), EmojiId, GuildId,
                       MessageReference, Snowflake (Snowflake), User, UserId)
@@ -34,7 +35,7 @@ import Lens.Micro (to)
 data EmojiIdentifier
     = Unicode Text
     | Custom EmojiId
-    deriving (Eq)
+    deriving (Eq, Show)
 
 toIdentifier :: Emoji -> EmojiIdentifier
 toIdentifier e =
@@ -42,18 +43,31 @@ toIdentifier e =
         Just id -> Custom id
         Nothing -> Unicode e.emojiName
 
+asText :: Emoji -> Text
+asText e =
+    case e.emojiId of
+        Just id -> e.emojiName <> ":" <> t id
+        Nothing -> e.emojiName
+    where t = pack . show
+
 instance Hashable EmojiIdentifier where
     hashWithSalt salt (Unicode a)                        = hashWithSalt salt a
     hashWithSalt salt (Custom (DiscordId (Snowflake a))) = hashWithSalt salt a
 
-type Reaction = HowdyHandler ReactionReplyData ReactionInput ()
+type Reaction = ReactionInput -> HowdyHandler ReactionReplyData ()
 type Permission = ReactionInput -> Bool
+
+instance Show Reaction where
+    show _ = "Reaction [ReactionInput -> HowdyHandler ReactionReplyData ()]"
+
+instance Show Permission where
+    show _ = "Reaction [ReactionInput -> Bool]"
 
 data ReactionReplyData = ReactionReplyData
     { rrdChannelId  :: ChannelId
     , rrdWhisperId  :: UserId
     , rrdMessageRef :: MessageReference
-    }
+    } deriving (Show)
 
 instance Lensed ReactionReplyData ChannelId where
     focus = to rrdChannelId
@@ -72,7 +86,8 @@ data ReactionDefinition = ReactionDefinition
     , rdPermission :: Permission
     , rdRunner     :: Reaction
     , rdDebug      :: Bool -- TODO: change to debug flags and later to customizable flags
-    }
+    , rdMinReacts  :: Integer
+    } deriving (Show)
 
 data ReactionInput = ReactionInput
     { target  :: EmojiIdentifier
@@ -82,7 +97,7 @@ data ReactionInput = ReactionInput
     , channel :: ChannelId
     , args    :: Text
     , ref     :: Maybe MessageReference
-    }
+    } deriving (Show)
 
 instance Default ReactionDefinition where
     def = ReactionDefinition
@@ -91,8 +106,9 @@ instance Default ReactionDefinition where
         , rdHidden = False
         , rdIdent = Unicode ""
         , rdPermission = const True
-        , rdRunner = pure ()
+        , rdRunner = const $ pure ()
         , rdDebug = False
+        , rdMinReacts = 1
         }
 
 
@@ -122,3 +138,6 @@ permission x rd = rd{ rdPermission = x }
 
 run :: Reaction -> ReactionDefinition -> ReactionDefinition
 run x rd = rd{ rdRunner = x }
+
+minReacts :: Integer -> ReactionDefinition -> ReactionDefinition
+minReacts x rd = rd{ rdMinReacts = x }

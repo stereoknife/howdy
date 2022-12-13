@@ -5,9 +5,12 @@ module Howdy.Internal.Bot.CommandManager where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
-import Control.Monad.Reader (runReader)
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.Reader (ReaderT (runReaderT), runReader)
 import Data.HashMap.Lazy (empty, (!?))
 import Data.Text (Text)
+import qualified Data.Text.IO as TIO
+import Debug.Trace (trace)
 import Discord (DiscordHandler)
 import Discord.Types (Message (..), MessageReference (MessageReference), User (userId))
 import Howdy.Comptime.Bot (BotDefinition (..))
@@ -18,7 +21,6 @@ import Howdy.Internal.Error (HowdyException (CommandNotFound, DiscordError, Forb
                              report)
 import Howdy.Internal.Parser.Class (parse, parseWithError)
 import Howdy.Internal.Parser.Cons (firstof, flag, string, word)
-
 {-
 Steps to manage commands:
 
@@ -40,6 +42,10 @@ Requisites:
 
 type Command = String
 
+(<<) = flip trace
+
+noop :: Applicative a => a ()
+noop = pure ()
 
 commandHandler :: Message -> BotDefinition -> DiscordHandler ()
 commandHandler m b = do
@@ -50,19 +56,26 @@ commandHandler m b = do
     (debug, rest') <- parse (flag "#debug") rest
 
     -- Build command input
-    ci <- buildInput m rest'
+    ci <- trace "Processing input"
+        $ buildInput m rest'
+    trace ("Command input: " ++ show ci) noop
 
     -- Get Command
-    cr <- fetchCommand b ci.target
+    cr <- trace "Fetching command"
+        $ fetchCommand b ci.target
+    trace ("Found command " ++ show ci.target) noop
 
     -- Check permission
-    permit cr ci
+    trace "Checking permission"
+        $ permit cr ci
 
     let crd = CommandReplyData m.messageChannelId m.messageAuthor.userId
             $ MessageReference (Just m.messageId) Nothing Nothing True
+    let runner = cr.cdRunner ci
 
     -- Run command
-    runReader (unHowdy cr.cdRunner) crd ci
+    trace "Running command"
+        $ runReaderT (unHowdy runner) crd
 
 
 type HowdyDebug = ()
@@ -73,8 +86,9 @@ debugHandler = undefined
 
 fetchCommand :: MonadThrow m => BotDefinition -> Text -> m CommandDefinition
 fetchCommand b a = do let aliases = b.bdAliases
-                          coms = b.bdCommands
+                          coms    = b.bdCommands
                       id <- report UnknownIdentifier $ aliases !? a
+                      trace ("Identified command " ++ show id) noop
                       report CommandNotFound $ coms !? id
 
 
@@ -87,7 +101,7 @@ buildInput m t = do (target, args) <- parse word t
                     pure $ CommandInput target user guild channel args ref
 
 permit :: MonadThrow m => CommandDefinition -> CommandInput -> m ()
-permit p i = unless (False {- p.permission i -}) $ throwM ForbiddenCommand
+permit p i = unless  (p.cdPermission i) $ throwM ForbiddenCommand
 
 doNothing :: DiscordHandler ()
 doNothing = pure ()

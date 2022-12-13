@@ -19,6 +19,7 @@ import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField (getField))
 import Lens.Micro (SimpleGetter)
+import Lens.Micro.Extras (view)
 
 
 -- Even though this is called Lens in reality it only uses Getters
@@ -52,7 +53,11 @@ instance Monad m => Monad (LensT l m) where
 --   focus = to $ getField @k
 
 class WithLens a m where
-    view :: m a
+    look :: m a
+
+instance (MonadReader r m, Lensed r a) => WithLens a m where
+    look = asks $ view focus
+
 
 type family WithLenses (s :: [Type]) (m :: Type -> Type) :: Constraint where
     WithLenses (s:ss) m = (WithLens s m, WithLenses ss m)
