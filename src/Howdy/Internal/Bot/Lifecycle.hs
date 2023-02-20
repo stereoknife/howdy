@@ -30,22 +30,23 @@ start b = do
     tok <- credentials
     userFacingError <- runDiscord $ def
         { discordToken = tok
-        , discordOnEvent = eventHandler b
-        , discordOnLog = logHandler b
-        , discordOnStart = liftIO $ putStrLn "Started"
-        , discordOnEnd = liftIO $ putStrLn "Shutting down"
+        , discordOnEvent = \case
+            MessageCreate m      -> commandHandler m b `catch` errorHandler
+            MessageReactionAdd r -> reactionHandler r b `catch` errorHandler
+            _                    -> pure ()
+
+        , discordOnLog = \_log -> do
+            pure ()
+
+        , discordOnStart = do
+            liftIO $ putStrLn "Started"
+
+        , discordOnEnd = do
+            liftIO $ putStrLn "Shutting down"
+            --liftIO $ disconnect redis
+
         } -- if you see OnLog error, post in the discord / open an issue
 
     TIO.putStrLn userFacingError
     -- userFacingError is an unrecoverable error
     -- put normal 'cleanup' code in discordOnEnd (see examples)
-
-
-eventHandler :: BotDefinition -> Event -> DiscordHandler ()
-eventHandler bd = \case
-    MessageCreate m      -> commandHandler m bd `catch` errorHandler
-    MessageReactionAdd r -> reactionHandler r bd `catch` errorHandler
-    _                    -> pure ()
-
-logHandler :: BotDefinition -> Text -> IO ()
-logHandler _ _ = pure ()
