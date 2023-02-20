@@ -13,7 +13,8 @@ import Howdy.Comptime.Bot (BotDefinition (..))
 import Howdy.Internal.Bot.CommandManager (commandHandler)
 import Howdy.Internal.Bot.ReactionManager (reactionHandler)
 import Howdy.Internal.Error (HowdyException (..), errorHandler)
-import Howdy.Secrets (defaultTokenEnv, defaultTokenPath, fromList)
+import Howdy.Secrets (credentials, defaultTokenEnv, defaultTokenPath, fromList)
+import System.Environment
 
 bot :: (BotDefinition -> BotDefinition) -> IO ()
 bot b = do
@@ -26,7 +27,7 @@ bot b = do
 start :: BotDefinition -> IO ()
 start b = do
     putStrLn "Starting bot..."
-    tok <- fromList (defaultTokenPath:defaultTokenEnv:b.bdTokens)
+    tok <- credentials
     userFacingError <- runDiscord $ def
         { discordToken = tok
         , discordOnEvent = eventHandler b
