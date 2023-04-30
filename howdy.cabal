@@ -27,7 +27,8 @@ library
         Howdy.Secrets
         --Howdy.Bot
         --Howdy.Command
-        --Howdy.Discord
+        Howdy.Discord
+        Howdy.Text
         Control.Optics
 
     -- Modules included in this library but not exported.
