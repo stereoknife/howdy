@@ -1,0 +1,4 @@
+packages:
+    howdy.cabal
+    local-packages/discord-haskell/discord-haskell.cabal
+    local-packages/req/req.cabal
