@@ -1,6 +1,6 @@
 [submodule "local-packages/req"]
 	path = local-packages/req
-	url = https://github.com/mrkkrp/req.git
+	url = https://github.com/stereoknife/req.git
 [submodule "local-packages/discord-haskell"]
 	path = local-packages/discord-haskell
-	url = https://github.com/discord-haskell/discord-haskell.git
+	url = https://github.com/stereoknife/discord-haskell.git
