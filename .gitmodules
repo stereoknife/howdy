@@ -1,6 +1,6 @@
 [submodule "local-packages/req"]
 	path = local-packages/req
 	url = https://github.com/mrkkrp/req.git
-[submodule "local-packages/hs-memory"]
-	path = local-packages/hs-memory
-	url = https://github.com/tfausak/hs-memory.git
+[submodule "local-packages/discord-haskell"]
+	path = local-packages/discord-haskell
+	url = https://github.com/discord-haskell/discord-haskell.git
