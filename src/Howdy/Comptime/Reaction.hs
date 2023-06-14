@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
+
 module Howdy.Comptime.Reaction
     ( Reaction
     , Permission
@@ -27,9 +30,11 @@ import Data.Text (Text, pack)
 import Discord (DiscordHandler)
 import Discord.Types (ChannelId, DiscordId (DiscordId), Emoji (..), EmojiId, GuildId,
                       MessageReference, Snowflake (Snowflake), User, UserId)
-import Howdy.Internal.Discord (HowdyHandler)
+import Howdy.Internal.Discord (MonadReply)
 import Howdy.Internal.Error (HowdyException)
 import Lens.Micro (to)
+import Control.Monad.IO.Class ( MonadIO )
+import Howdy.Internal.Util (ToConstraints)
 
 
 data EmojiIdentifier
@@ -54,14 +59,8 @@ instance Hashable EmojiIdentifier where
     hashWithSalt salt (Unicode a)                        = hashWithSalt salt a
     hashWithSalt salt (Custom (DiscordId (Snowflake a))) = hashWithSalt salt a
 
-type Reaction = ReactionInput -> HowdyHandler ReactionReplyData ()
+type Reaction = forall m. (MonadIO m, MonadReply m) => ReactionInput -> m ()
 type Permission = ReactionInput -> Bool
-
-instance Show Reaction where
-    show _ = "Reaction [ReactionInput -> HowdyHandler ReactionReplyData ()]"
-
-instance Show Permission where
-    show _ = "Reaction [ReactionInput -> Bool]"
 
 data ReactionReplyData = ReactionReplyData
     { rrdChannelId  :: ChannelId
@@ -87,7 +86,7 @@ data ReactionDefinition = ReactionDefinition
     , rdRunner     :: Reaction
     , rdDebug      :: Bool -- TODO: change to debug flags and later to customizable flags
     , rdMinReacts  :: Integer
-    } deriving (Show)
+    }
 
 data ReactionInput = ReactionInput
     { target  :: EmojiIdentifier

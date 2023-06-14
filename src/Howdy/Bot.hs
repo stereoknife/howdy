@@ -1,0 +1,19 @@
+module Howdy.Bot
+    ( BotMeta
+    , BotDefinition
+    , prefixes
+    , command
+    , reaction
+    , token
+    , author
+    , repo
+    , note
+    , name
+    , bot
+    , start
+    , onInit
+    , onStart
+    ) where
+
+import Howdy.Comptime.Bot
+import Howdy.Internal.Lifecycle

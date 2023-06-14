@@ -19,7 +19,7 @@ fromAny :: String -> IO Text
 fromAny x = fromEnv x <|> fromFile x
 
 fromDef :: IO Text
-fromDef = fromEnv defaultTokenEnv <|> fromFile defaultTokenPath
+fromDef = fromEnv defaultTokenEnv -- <|> fromFile defaultTokenPath
 
 fromFile :: String -> IO Text
 fromFile = fmap decodeUtf8 . BS.readFile
