@@ -1,6 +1,5 @@
 module Howdy.Discord
-    ( HowdyHandler
-    , send
+    ( send
     , sendTo
     , embed
     , embedTo

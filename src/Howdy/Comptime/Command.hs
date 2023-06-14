@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE ExtendedDefaultRules  #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Howdy.Comptime.Command
     ( Command
@@ -20,33 +21,30 @@ module Howdy.Comptime.Command
     ) where
 
 import Control.Monad.Identity (Identity)
-import Control.Monad.Reader
 import Control.Monad.Trans.Except (ExceptT)
 import Control.Optics (Lensed (focus), WithLens (..))
 import Data.Default (Default (def))
 import Data.Text (Text)
 import Discord (DiscordHandler)
 import Discord.Types (ChannelId, GuildId, MessageReference, User, UserId)
-import Howdy.Internal.Discord (HowdyHandler)
+import Howdy.Internal.Discord (HowdyHandler, MonadReply)
 import Howdy.Internal.Error (HowdyException)
-import Howdy.Internal.Logging
+import Howdy.Internal.Logging ( (<<), (<+) )
 import Lens.Micro (to)
+import Control.Monad.IO.Class ( MonadIO )
+import Data.Kind (Constraint, Type)
+import Howdy.Internal.Util (ToConstraints)
 
 type Permission = CommandInput -> Bool
-type Command = CommandInput -> HowdyHandler CommandReplyData ()
 
-instance Show Command where
-    show _ = "Command [CommandInput -> HowdyHandler CommandReplyData ()]"
-
-instance Show Permission where
-    show _ = "Permission [CommandInput -> Bool]"
+type Command = forall m. (MonadIO m, MonadReply m) => CommandInput -> m ()
 
 data CommandReplyData = CommandReplyData
     { crdChannelId  :: ChannelId
     , crdWhisperId  :: UserId
     , crdMessageRef :: MessageReference
     }
-
+ 
 instance Lensed CommandReplyData ChannelId where
     focus = to crdChannelId
 
@@ -64,7 +62,7 @@ data CommandDefinition = CommandDefinition
     , cdPermission :: Permission
     , cdRunner     :: Command
     , cdDebug      :: Bool -- TODO: change to debug flags and later to customizable flags
-    } deriving (Show)
+    }
 
 
 data CommandInput = CommandInput

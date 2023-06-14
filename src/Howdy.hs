@@ -1,4 +1,15 @@
-module Howdy ((C.>>), fromString) where
+{-# LANGUAGE TypeFamilies #-}
 
-import Data.String
-import Howdy.Comptime.Command as C
+module Howdy
+    ((Howdy.>>)
+    , bot
+    , start
+    ) where
+
+import Howdy.Bot
+
+infixl 1 >>
+(>>) :: (b -> c) -> (a -> b) -> a -> c
+(>>) = (.)
+
+type family CommandWith

@@ -1,7 +1,7 @@
-{-# LANGUAGE LambdaCase #-}
-
-
-module Howdy.Internal.Bot.CommandManager where
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+module Howdy.Internal.Manager.Command where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
@@ -12,7 +12,7 @@ import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import Debug.Trace (trace)
 import Discord (DiscordHandler)
-import Discord.Types (Message (..), MessageReference (MessageReference), User (userId))
+import Discord.Types (Message (..), MessageReference (MessageReference), User (userId), ChannelId, UserId)
 import Howdy.Comptime.Bot (BotDefinition (..))
 import Howdy.Comptime.Command (CommandDefinition (..), CommandInput (CommandInput, target),
                                CommandReplyData (..))
@@ -21,27 +21,10 @@ import Howdy.Internal.Error (HowdyException (CommandNotFound, DiscordError, Forb
                              report)
 import Howdy.Internal.Parser.Class (parse, parseWithError)
 import Howdy.Internal.Parser.Cons (firstof, flag, string, word)
-{-
-Steps to manage commands:
+import Control.Optics (Lensed (focus))
+import Lens.Micro (to)
 
-Requisites:
-- A reader (or other kind of environment) that holds commands and reactions
-- Error handling/catching
-- A way to manipulate errors later on in a similar way to functioning procedure or whatever
-
-  ┌ Discord ───────────┐
-  │ Fetch Command      │
-  │                    │
-  │┌ Discord, Error ──┐│
-  ││ Execute command  ││
-  │└──────────────────┘│
-  │                    │
-  │ Handle Error       │
-  └────────────────────┘
--}
-
-type Command = String
-
+(<<) :: c -> String -> c
 (<<) = flip trace
 
 noop :: Applicative a => a ()
@@ -71,7 +54,7 @@ commandHandler m b = do
 
     let crd = CommandReplyData m.messageChannelId m.messageAuthor.userId
             $ MessageReference (Just m.messageId) Nothing Nothing True
-    let runner = cr.cdRunner ci
+    let runner = cdRunner cr ci
 
     -- Run command
     trace "Running command"
@@ -85,23 +68,25 @@ debugHandler = undefined
 
 
 fetchCommand :: MonadThrow m => BotDefinition -> Text -> m CommandDefinition
-fetchCommand b a = do let aliases = b.bdAliases
-                          coms    = b.bdCommands
-                      id <- report UnknownIdentifier $ aliases !? a
-                      trace ("Identified command " ++ show id) noop
-                      report CommandNotFound $ coms !? id
+fetchCommand b a = do
+    let aliases = b.bdAliases
+        coms    = b.bdCommands
+    id <- report UnknownIdentifier $ aliases !? a
+    trace ("Identified command " ++ show id) noop
+    report CommandNotFound $ coms !? id
 
 
 buildInput :: MonadThrow m => Message -> Text -> m CommandInput
-buildInput m t = do (target, args) <- parse word t
-                    let user = m.messageAuthor
-                        guild = m.messageGuildId
-                        channel = m.messageChannelId
-                        ref = m.messageReference
-                    pure $ CommandInput target user guild channel args ref
+buildInput m t = do
+    (target, args) <- parse word t
+    let user = m.messageAuthor
+        guild = m.messageGuildId
+        channel = m.messageChannelId
+        ref = m.messageReference
+    pure $ CommandInput target user guild channel args ref
 
 permit :: MonadThrow m => CommandDefinition -> CommandInput -> m ()
-permit p i = unless  (p.cdPermission i) $ throwM ForbiddenCommand
+permit p i = unless (p.cdPermission i) $ throwM ForbiddenCommand
 
 doNothing :: DiscordHandler ()
 doNothing = pure ()

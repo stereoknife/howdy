@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 
-module Howdy.Internal.Bot.ReactionManager where
+module Howdy.Internal.Manager.Reaction where
 
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
@@ -64,7 +64,7 @@ reactionHandler r b = do
 
     let rrd = ReactionReplyData r.reactionChannelId r.reactionUserId
             $ MessageReference (Just r.reactionMessageId) Nothing Nothing True
-    let runner = com.rdRunner ri
+    let runner = rdRunner com ri
 
     -- Run command
     runReaderT (unHowdy runner) rrd

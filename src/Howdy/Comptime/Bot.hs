@@ -1,4 +1,5 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Howdy.Comptime.Bot where
 
@@ -12,6 +13,8 @@ import Howdy.Comptime.Command (CommandDefinition (..))
 import Howdy.Comptime.Reaction (EmojiIdentifier, ReactionDefinition)
 import Howdy.Internal.Debug (DebugOptions (..))
 import Howdy.Internal.Logging (Fmt (..), (<+), (<<))
+import Discord (DiscordHandler)
+import Data.Dynamic (Dynamic, toDyn)
 
 data BotMeta = BotMeta
     { bmAuthor :: Maybe UserId
@@ -29,7 +32,9 @@ data BotDefinition = BotDefinition
     , bdTokens    :: [String]
     , bdDebug     :: DebugOptions
     , bdMeta      :: BotMeta
-    } deriving (Show)
+    , bdOnStart   :: DiscordHandler ()
+    , bdOnInit    :: IO ()
+    }
 
 instance Default BotDefinition where
     def = BotDefinition
@@ -41,6 +46,8 @@ instance Default BotDefinition where
         , bdTokens = []
         , bdDebug = def
         , bdMeta = def
+        , bdOnStart = pure ()
+        , bdOnInit = pure ()
         }
 
 instance Default BotMeta where
@@ -76,7 +83,7 @@ reaction name rd bd = bd{ bdReactions = insert name rd' bd.bdReactions }
     where rd' = rd def
 
 token :: String -> BotDefinition -> BotDefinition
-token x bd = bd { bdTokens = (x:bd.bdTokens) }
+token x bd = bd { bdTokens = x:bd.bdTokens }
     << "Setting token: ***"
 
 author :: UserId -> BotDefinition -> BotDefinition
@@ -95,7 +102,13 @@ name :: Text -> BotDefinition -> BotDefinition
 name x bd = bd{ bdMeta = bd.bdMeta { bmName = Just x } }
     << "Setting name: " <+ x
 
+onInit :: IO () -> BotDefinition -> BotDefinition
+onInit x bd = bd{ bdOnInit = x }
+
+onStart :: DiscordHandler () -> BotDefinition -> BotDefinition
+onStart x bd = bd{ bdOnStart = x }
+
 registerAliases :: [Text] -> Text -> HashMap Text Text -> HashMap Text Text
-registerAliases as t map = go as map
+registerAliases as t = go as
     where go (x:xs) m = insert x t (go xs m)
           go [] m     = m
