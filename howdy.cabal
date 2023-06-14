@@ -54,8 +54,8 @@ library
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-          base                   >= 4.16.0.0 && < 4.18
-        , discord-haskell       ^>= 1.13.0
+          base                   >= 4.16.0.0 && < 5
+        , discord-haskell       ^>= 1.15
         , http-client           ^>= 0.7.11
         , microlens             ^>= 0.4.13.0
         , pretty                ^>= 1.1.3.6
