@@ -4,7 +4,9 @@
 module Howdy.Internal.Manager.Command where
 
 import Control.Monad.Catch (MonadThrow (..))
-import Control.Monad.Except (ExceptT, MonadTrans (lift), runExceptT, unless)
+import Control.Monad (unless)
+import Control.Monad.Trans (MonadTrans(lift))
+import Control.Monad.Except (ExceptT, runExceptT)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (ReaderT (runReaderT), runReader)
 import Data.HashMap.Lazy (empty, (!?))
