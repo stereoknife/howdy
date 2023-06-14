@@ -42,9 +42,9 @@ library
         Howdy.Internal.Parser.Types
         Howdy.Comptime.Command
         Howdy.Comptime.Bot
-        Howdy.Internal.Bot.CommandManager
-        Howdy.Internal.Bot.ReactionManager
-        Howdy.Internal.Bot.Lifecycle
+        Howdy.Internal.Manager.Command
+        Howdy.Internal.Manager.Reaction
+        Howdy.Internal.Lifecycle
         Howdy.Internal.Debug
         Howdy.Internal.Discord
         Howdy.Internal.Logging
